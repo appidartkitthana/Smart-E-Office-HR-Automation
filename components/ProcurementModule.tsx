@@ -404,12 +404,12 @@ const ProcurementModule: React.FC<ProcurementModuleProps> = ({ lang, t }) => {
            </div>
            <div className="bg-white p-8 rounded-[2.5rem] border border-indigo-100 shadow-sm relative group overflow-hidden">
               <div className="absolute top-0 right-0 p-8 text-indigo-50 group-hover:scale-110 transition-transform"><Briefcase size={100} /></div>
-              <p className="text-[10px] font-black text-indigo-500 uppercase tracking-widest mb-1">CAPEX Projects</p>
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">CAPEX Projects</p>
               <h3 className="text-4xl font-black text-indigo-600">{capexProjects.length} โครงการ</h3>
            </div>
            <div className="bg-white p-8 rounded-[2.5rem] border border-emerald-100 shadow-sm relative group overflow-hidden">
               <div className="absolute top-0 right-0 p-8 text-emerald-50 group-hover:scale-110 transition-transform"><CheckCircle size={100} /></div>
-              <p className="text-[10px] font-black text-emerald-500 uppercase tracking-widest mb-1">อนุมัติแล้วเดือนนี้</p>
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">อนุมัติแล้วเดือนนี้</p>
               <h3 className="text-4xl font-black text-emerald-600">฿ {(pos.reduce((a,b)=>a+b.totalAmount,0)/1000).toFixed(1)}k</h3>
            </div>
         </div>
@@ -452,6 +452,9 @@ const ProcurementModule: React.FC<ProcurementModuleProps> = ({ lang, t }) => {
                                 <FileCheck size={20} />
                              </button>
                           )}
+                          <button onClick={() => { setPrintData(p); setShowPrintPr(true); }} className="p-4 bg-slate-50 text-slate-400 hover:bg-sky-500 hover:text-white rounded-3xl transition-all shadow-sm">
+                             <Printer size={20} />
+                          </button>
                           <button onClick={() => handleOpenPrModal(p)} className="p-4 bg-slate-50 text-slate-400 hover:bg-sky-500 hover:text-white rounded-3xl transition-all"><Edit2 size={20} /></button>
                        </div>
                     </td>
@@ -641,7 +644,7 @@ const ProcurementModule: React.FC<ProcurementModuleProps> = ({ lang, t }) => {
                                        <div className="w-8 h-8 rounded-lg bg-sky-50 flex items-center justify-center text-sky-500"><File size={16}/></div>
                                        <span className="text-[11px] font-bold text-slate-600 truncate max-w-[120px]">{file}</span>
                                     </div>
-                                    <button type="button" onClick={() => removeAttachment(file)} className="p-2 text-rose-300 hover:text-rose-500 transition-colors"><Trash2 size={14}/></button>
+                                    <button type="button" onClick={() => removeAttachment(file)} className="p-2 text-rose-300 hover:text-rose-50 transition-colors"><Trash2 size={14}/></button>
                                  </div>
                               ))}
                               {(!currentPr.attachments || currentPr.attachments.length === 0) && (
@@ -794,67 +797,307 @@ const ProcurementModule: React.FC<ProcurementModuleProps> = ({ lang, t }) => {
         </div>
       )}
 
-      {/* Print Previews same as previous but kept for completeness */}
-      {showPrintPo && printData && (
-         <div className="fixed inset-0 z-[200] bg-white overflow-y-auto print:static">
-            <div className="max-w-[1000px] mx-auto p-12 bg-white min-h-screen relative print:shadow-none">
-               <button onClick={() => setShowPrintPo(false)} className="absolute top-10 right-10 p-3 bg-slate-100 rounded-full hover:bg-slate-200 print:hidden"><X size={24} /></button>
-               <button onClick={() => window.print()} className="absolute top-10 right-28 px-6 py-3 bg-sky-500 text-white font-black rounded-2xl flex items-center gap-2 print:hidden shadow-lg"><Printer size={20} /> Print</button>
-               <div className="border-4 border-double border-slate-800 p-8">
-                  <h1 className="text-3xl font-black text-slate-800 text-center uppercase tracking-widest border-b-2 border-slate-800 pb-4 mb-8">Purchase Order</h1>
-                  <div className="grid grid-cols-2 gap-8 mb-8 text-xs font-bold text-slate-700">
-                     <div className="space-y-2">
-                        <p>VENDOR: <span className="font-black underline">{printData.vendorName}</span></p>
-                        <p>ADDRESS: <span className="italic">{printData.vendorAddress}</span></p>
+      {/* PR Print Preview mimicking F-GA-001 */}
+      {showPrintPr && printData && (
+         <div className="fixed inset-0 z-[200] bg-white overflow-y-auto animate-in zoom-in-105 duration-300 print:static print:p-0">
+            <div className="max-w-[1000px] mx-auto p-12 bg-white min-h-screen shadow-2xl relative print:shadow-none print:p-8">
+               <button onClick={() => setShowPrintPr(false)} className="absolute top-10 right-10 p-3 bg-slate-100 rounded-full hover:bg-slate-200 print:hidden transition-all"><X size={24} /></button>
+               <button onClick={() => window.print()} className="absolute top-10 right-28 px-6 py-3 bg-sky-500 text-white font-black rounded-2xl flex items-center gap-2 hover:bg-sky-600 print:hidden shadow-lg shadow-sky-100 active:scale-95 transition-all"><Printer size={20} /> Print PR</button>
+
+               <div className="border border-slate-400 p-8 min-h-full">
+                  <div className="flex justify-between items-start border-b-2 border-slate-400 pb-6 mb-8">
+                     <div className="space-y-1">
+                        <h2 className="text-2xl font-black text-slate-800 tracking-tighter uppercase leading-none text-left">SUMINO AAPICO (Thailand) Company Limited (Head Office)</h2>
+                        <p className="text-[10px] font-medium text-slate-600 text-left">700/706 Moo 3, T. Bankao, A. Panthong, Chonburi 20160</p>
+                        <p className="text-[10px] font-medium text-slate-600 text-left">Tel: 66-38-447-628-31, Fax No. 66-38-447-632</p>
+                        <p className="text-[10px] font-medium text-slate-600 text-left">Tax No. 0-2055-56012-44-8</p>
                      </div>
-                     <div className="space-y-2 text-right">
-                        <p>PO NO: <span className="font-black">{printData.id}</span></p>
-                        <p>DATE: <span className="font-black">{printData.date}</span></p>
-                        <p>REF PR: <span className="font-black">{printData.prRef}</span></p>
+                     <div className="text-right space-y-4 shrink-0">
+                        <h1 className="text-2xl font-black text-slate-800 tracking-[0.1em] uppercase border-b-2 border-slate-800 inline-block">Purchase Requisition</h1>
+                        <div className="space-y-1 text-[10px] font-bold text-slate-500">
+                           <p>FORM NO : F-GA-001</p>
+                           <p>REV : 01</p>
+                        </div>
                      </div>
                   </div>
-                  <table className="w-full border-collapse border border-slate-800 text-xs mb-8">
-                     <thead>
-                        <tr className="bg-slate-100 font-black">
-                           <th className="border border-slate-800 p-2 w-12">No.</th>
-                           <th className="border border-slate-800 p-2 text-left">Description</th>
-                           <th className="border border-slate-800 p-2 w-16">Unit</th>
-                           <th className="border border-slate-800 p-2 w-12">Qty</th>
-                           <th className="border border-slate-800 p-2 w-24 text-right">Price</th>
-                           <th className="border border-slate-800 p-2 w-32 text-right">Amount</th>
-                        </tr>
-                     </thead>
-                     <tbody>
-                        {printData.items.map((item: any, i: number) => (
-                           <tr key={i} className="font-medium">
-                              <td className="border border-slate-800 p-2 text-center">{i+1}</td>
-                              <td className="border border-slate-800 p-2">{item.description}</td>
-                              <td className="border border-slate-800 p-2 text-center">{item.unit}</td>
-                              <td className="border border-slate-800 p-2 text-center">{item.quantity}</td>
-                              <td className="border border-slate-800 p-2 text-right">{item.unitPrice.toLocaleString()}</td>
-                              <td className="border border-slate-800 p-2 text-right">{item.total.toLocaleString()}</td>
+
+                  <div className="grid grid-cols-2 gap-x-12 gap-y-4 mb-8 text-[11px] font-bold text-slate-700">
+                     <div className="space-y-2">
+                        <div className="flex items-start">
+                           <span className="w-32 shrink-0 text-slate-400 uppercase tracking-tighter text-left">Requester Name:</span>
+                           <span className="flex-1 font-black underline underline-offset-4 decoration-slate-200 text-left">{printData.requester}</span>
+                        </div>
+                        <div className="flex items-start">
+                           <span className="w-32 shrink-0 text-slate-400 uppercase tracking-tighter text-left">Department:</span>
+                           <span className="flex-1 font-black text-left">{printData.department}</span>
+                        </div>
+                        <div className="flex items-start pt-4">
+                           <span className="w-32 shrink-0 text-slate-400 uppercase tracking-tighter text-left italic font-medium">Suggested Vendor:</span>
+                           <span className="flex-1 font-bold text-left">{printData.suggestedVendor || '-'}</span>
+                        </div>
+                     </div>
+                     <div className="space-y-2">
+                        <div className="flex justify-between border-b border-slate-200 pb-1">
+                           <span className="text-slate-400 uppercase tracking-tighter">P/R No. :</span>
+                           <span className="font-black text-sky-700">{printData.id}</span>
+                        </div>
+                        <div className="flex justify-between border-b border-slate-200 pb-1">
+                           <span className="text-slate-400 uppercase tracking-tighter">Date :</span>
+                           <span className="font-black">{printData.date}</span>
+                        </div>
+                        <div className="flex justify-between border-b border-slate-200 pb-1 pt-4">
+                           <span className="text-slate-400 uppercase tracking-tighter">Procurement Type:</span>
+                           <span className="font-black uppercase">{printData.type}</span>
+                        </div>
+                     </div>
+                  </div>
+
+                  <div className="mb-6">
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 text-left">Justification / Reason for purchase:</p>
+                    <div className="w-full p-4 border border-slate-200 bg-slate-50 min-h-[60px] text-xs font-bold text-slate-600 text-left rounded-sm">
+                      {printData.justification}
+                    </div>
+                  </div>
+
+                  <div className="border-2 border-slate-400 mb-6 overflow-hidden rounded-sm">
+                     <table className="w-full text-[11px] border-collapse">
+                        <thead className="bg-slate-100 uppercase font-black tracking-widest border-b border-slate-400 text-[9px]">
+                           <tr>
+                              <th className="border-r border-slate-400 p-3 w-10">No.</th>
+                              <th className="border-r border-slate-400 p-3 text-left">Item Description / Specifications</th>
+                              <th className="border-r border-slate-400 p-3 w-20 text-center">Unit</th>
+                              <th className="border-r border-slate-400 p-3 w-16 text-center">Qty</th>
+                              <th className="border-r border-slate-400 p-3 w-28 text-right">Unit Price</th>
+                              <th className="p-3 w-32 text-right">Total Amount</th>
                            </tr>
-                        ))}
-                     </tbody>
-                     <tfoot>
-                        <tr className="font-black bg-slate-50">
-                           <td colSpan={5} className="border border-slate-800 p-3 text-right">GRAND TOTAL (EXCL. VAT)</td>
-                           <td className="border border-slate-800 p-3 text-right">฿ {printData.totalAmount.toLocaleString()}</td>
-                        </tr>
-                     </tfoot>
-                  </table>
-                  <div className="grid grid-cols-3 gap-4 border border-slate-800 p-4 h-32">
-                     <div className="flex flex-col justify-end items-center text-[10px] font-black border-r border-slate-300">
-                        <div className="h-10 w-24 border-b border-slate-400 mb-2"></div>
-                        <p>ISSUED BY (PURCHASING)</p>
+                        </thead>
+                        <tbody>
+                           {printData.items.map((item: any, i: number) => (
+                              <tr key={i} className="border-b border-slate-300 h-10">
+                                 <td className="border-r border-slate-400 p-3 text-center font-bold">{i + 1}</td>
+                                 <td className="border-r border-slate-400 p-3 font-bold text-left">{item.description}</td>
+                                 <td className="border-r border-slate-400 p-3 text-center">{item.unit}</td>
+                                 <td className="border-r border-slate-400 p-3 text-center font-black">{item.quantity}</td>
+                                 <td className="border-r border-slate-400 p-3 text-right">{item.unitPrice.toLocaleString()}</td>
+                                 <td className="p-3 text-right font-black">{item.total.toLocaleString()}</td>
+                              </tr>
+                           ))}
+                           {Array.from({length: Math.max(0, 8 - printData.items.length)}).map((_, i) => (
+                             <tr key={`empty-${i}`} className="border-b border-slate-100 h-10">
+                               <td className="border-r border-slate-400"></td><td className="border-r border-slate-400"></td><td className="border-r border-slate-400"></td><td className="border-r border-slate-400"></td><td className="border-r border-slate-400"></td><td></td>
+                             </tr>
+                           ))}
+                        </tbody>
+                        <tfoot className="font-black text-slate-800 bg-slate-50 uppercase tracking-tighter">
+                           <tr className="border-t-2 border-slate-400">
+                              <td colSpan={5} className="p-2 text-right border-r border-slate-400 font-bold uppercase">Sub Total</td>
+                              <td className="p-2 text-right font-black">{printData.totalAmount.toLocaleString()}</td>
+                           </tr>
+                           <tr className="border-t border-slate-300">
+                              <td colSpan={5} className="p-2 text-right border-r border-slate-400 font-bold uppercase">Vat 7%</td>
+                              <td className="p-2 text-right font-black">{(printData.totalAmount * 0.07).toLocaleString()}</td>
+                           </tr>
+                           <tr className="border-t-2 border-slate-400 bg-slate-200">
+                              <td colSpan={5} className="p-3 text-right border-r border-slate-400 font-black text-base uppercase">Grand Total (Baht)</td>
+                              <td className="p-3 text-right font-black text-base underline underline-offset-2">{(printData.totalAmount * 1.07).toLocaleString()}</td>
+                           </tr>
+                        </tfoot>
+                     </table>
+                  </div>
+
+                  <div className="mt-10">
+                     <div className="grid grid-cols-4 border-2 border-slate-400 text-[9px] uppercase font-black text-slate-700 h-44">
+                        <div className="border-r border-slate-400 p-4 flex flex-col justify-between items-center text-center">
+                           <p className="w-full text-left font-bold text-slate-400">1. Requester :</p>
+                           <div className="space-y-1">
+                              {printData.requesterSign?.dataUrl && <img src={printData.requesterSign.dataUrl} className="h-14 mx-auto grayscale brightness-50" alt="sign" />}
+                              <p className="border-t border-slate-500 pt-2 px-4 whitespace-nowrap">{printData.requesterSign?.signerName || '................................'}</p>
+                              <p className="text-[8px] text-slate-400">Date : {printData.requesterSign?.signedDate || '..../..../....'}</p>
+                           </div>
+                        </div>
+                        <div className="border-r border-slate-400 p-4 flex flex-col justify-between items-center text-center">
+                           <p className="w-full text-left font-bold text-slate-400">2. Supervisor :</p>
+                           <div className="space-y-1">
+                              {printData.supervisorSign?.dataUrl && <img src={printData.supervisorSign.dataUrl} className="h-14 mx-auto grayscale brightness-50" alt="sign" />}
+                              <p className="border-t border-slate-500 pt-2 px-4 whitespace-nowrap">{printData.supervisorSign?.signerName || '................................'}</p>
+                              <p className="text-[8px] text-slate-400">Date : {printData.supervisorSign?.signedDate || '..../..../....'}</p>
+                           </div>
+                        </div>
+                        <div className="border-r border-slate-400 p-4 flex flex-col justify-between items-center text-center">
+                           <p className="w-full text-left font-bold text-slate-400">3. Purchasing :</p>
+                           <div className="space-y-1">
+                              {printData.purchasingSign?.dataUrl && <img src={printData.purchasingSign.dataUrl} className="h-14 mx-auto grayscale brightness-50" alt="sign" />}
+                              <p className="border-t border-slate-500 pt-2 px-4 whitespace-nowrap">{printData.purchasingSign?.signerName || '................................'}</p>
+                              <p className="text-[8px] text-slate-400">Date : {printData.purchasingSign?.signedDate || '..../..../....'}</p>
+                           </div>
+                        </div>
+                        <div className="p-4 flex flex-col justify-between items-center text-center">
+                           <p className="w-full text-left font-bold text-slate-400">4. Approved By (MD) :</p>
+                           <div className="space-y-1">
+                              {printData.mdSign?.dataUrl && <img src={printData.mdSign.dataUrl} className="h-14 mx-auto grayscale brightness-50" alt="sign" />}
+                              <p className="border-t border-slate-500 pt-2 px-4 whitespace-nowrap">{printData.mdSign?.signerName || '................................'}</p>
+                              <p className="text-[8px] text-slate-400">Date : {printData.mdSign?.signedDate || '..../..../....'}</p>
+                           </div>
+                        </div>
                      </div>
-                     <div className="flex flex-col justify-end items-center text-[10px] font-black border-r border-slate-300">
-                        <div className="h-10 w-24 border-b border-slate-400 mb-2"></div>
-                        <p>CHECKED BY (MANAGER)</p>
+                  </div>
+               </div>
+            </div>
+         </div>
+      )}
+
+      {/* PO Print Preview mimicking F-GA-002 */}
+      {showPrintPo && printData && (
+         <div className="fixed inset-0 z-[200] bg-white overflow-y-auto animate-in zoom-in-105 duration-300 print:static print:p-0">
+            <div className="max-w-[1000px] mx-auto p-12 bg-white min-h-screen shadow-2xl relative print:shadow-none print:p-8">
+               <button onClick={() => setShowPrintPo(false)} className="absolute top-10 right-10 p-3 bg-slate-100 rounded-full hover:bg-slate-200 print:hidden transition-all"><X size={24} /></button>
+               <button onClick={() => window.print()} className="absolute top-10 right-28 px-6 py-3 bg-sky-500 text-white font-black rounded-2xl flex items-center gap-2 hover:bg-sky-600 print:hidden shadow-lg shadow-sky-100 active:scale-95 transition-all"><Printer size={20} /> Print PO</button>
+
+               <div className="border border-slate-400 p-8 min-h-full">
+                  <div className="flex justify-between items-start border-b-2 border-slate-400 pb-6 mb-8">
+                     <div className="space-y-1">
+                        <h2 className="text-2xl font-black text-slate-800 tracking-tighter uppercase leading-none text-left">SUMINO AAPICO (Thailand) Company Limited (Head Office)</h2>
+                        <p className="text-[10px] font-medium text-slate-600 text-left">700/706 Moo 3, T. Bankao, A. Panthong, Chonburi 20160</p>
+                        <p className="text-[10px] font-medium text-slate-600 text-left">Tel: 66-38-447-628-31, Fax No. 66-38-447-632</p>
+                        <p className="text-[10px] font-medium text-slate-600 text-left">Tax No. 0-2055-56012-44-8</p>
                      </div>
-                     <div className="flex flex-col justify-end items-center text-[10px] font-black">
-                        <div className="h-10 w-24 border-b border-slate-400 mb-2"></div>
-                        <p>APPROVED BY (MD)</p>
+                     <div className="text-right space-y-4 shrink-0">
+                        <h1 className="text-2xl font-black text-slate-800 tracking-[0.2em] uppercase border-b-2 border-slate-800 inline-block">Purchase Order</h1>
+                        <div className="space-y-1 text-[10px] font-bold text-slate-50">
+                           <p>Page : 1/1</p>
+                           <p>CAPRE NO : {printData.capreNo || '-'}</p>
+                        </div>
+                     </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-x-12 gap-y-4 mb-8 text-[11px] font-bold text-slate-700">
+                     <div className="space-y-2">
+                        <div className="flex items-start">
+                           <span className="w-32 shrink-0 text-slate-400 uppercase tracking-tighter text-left">Shipping Address:</span>
+                           <span className="flex-1 font-black underline underline-offset-4 decoration-slate-200 text-left">SUMINO AAPICO (Thailand) Co., Ltd.</span>
+                        </div>
+                        <div className="flex items-start pt-2">
+                           <span className="w-32 shrink-0 text-slate-400 uppercase tracking-tighter text-left">Vendor Name:</span>
+                           <span className="flex-1 font-black text-left">{printData.vendorName}</span>
+                        </div>
+                        <div className="flex items-start">
+                           <span className="w-32 shrink-0 text-slate-400 uppercase tracking-tighter text-left">Address:</span>
+                           <span className="flex-1 font-medium italic text-left">{printData.vendorAddress || '................................................................'}</span>
+                        </div>
+                     </div>
+                     <div className="space-y-2">
+                        <div className="flex justify-between border-b border-slate-200 pb-1">
+                           <span className="text-slate-400 uppercase tracking-tighter">P/O No. :</span>
+                           <span className="font-black text-sky-700">{printData.id}</span>
+                        </div>
+                        <div className="flex justify-between border-b border-slate-200 pb-1">
+                           <span className="text-slate-400 uppercase tracking-tighter">Date :</span>
+                           <span className="font-black">{printData.date}</span>
+                        </div>
+                        <div className="flex justify-between border-b border-slate-200 pb-1 pt-4">
+                           <span className="text-slate-400 uppercase tracking-tighter">Credit Term:</span>
+                           <span className="font-black">{printData.creditTerm || '30 Days'}</span>
+                        </div>
+                        <div className="flex justify-between border-b border-slate-200 pb-1">
+                           <span className="text-slate-400 uppercase tracking-tighter">Refer P/R No :</span>
+                           <span className="font-black">{printData.prRef}</span>
+                        </div>
+                        <div className="flex justify-between border-b border-slate-200 pb-1">
+                           <span className="text-slate-400 uppercase tracking-tighter">Dept.Order :</span>
+                           <span className="font-black uppercase">{printData.department || 'IT'}</span>
+                        </div>
+                     </div>
+                  </div>
+
+                  <div className="border-2 border-slate-400 mb-6 overflow-hidden rounded-sm">
+                     <table className="w-full text-[11px] border-collapse">
+                        <thead className="bg-slate-100 uppercase font-black tracking-widest border-b border-slate-400 text-[9px]">
+                           <tr>
+                              <th className="border-r border-slate-400 p-3 w-10">Item</th>
+                              <th className="border-r border-slate-400 p-3 text-left">Description</th>
+                              <th className="border-r border-slate-400 p-3 w-24 text-center">Request Date</th>
+                              <th className="border-r border-slate-400 p-3 w-16 text-center">Unit</th>
+                              <th className="border-r border-slate-400 p-3 w-12 text-center">Qty</th>
+                              <th className="border-r border-slate-400 p-3 w-28 text-right">Unit Price(Baht)</th>
+                              <th className="p-3 w-32 text-right">Amount(Baht)</th>
+                           </tr>
+                        </thead>
+                        <tbody>
+                           {printData.items.map((item: any, i: number) => (
+                              <tr key={i} className="border-b border-slate-300 h-10">
+                                 <td className="border-r border-slate-400 p-3 text-center font-bold">{i + 1}</td>
+                                 <td className="border-r border-slate-400 p-3 font-bold text-left">{item.description}</td>
+                                 <td className="border-r border-slate-400 p-3 text-center">{printData.date}</td>
+                                 <td className="border-r border-slate-400 p-3 text-center">{item.unit}</td>
+                                 <td className="border-r border-slate-400 p-3 text-center font-black">{item.quantity}</td>
+                                 <td className="border-r border-slate-400 p-3 text-right">{item.unitPrice.toLocaleString()}</td>
+                                 <td className="p-3 text-right font-black">{item.total.toLocaleString()}</td>
+                              </tr>
+                           ))}
+                           {Array.from({length: Math.max(0, 12 - printData.items.length)}).map((_, i) => (
+                             <tr key={`empty-${i}`} className="border-b border-slate-100 h-10">
+                               <td className="border-r border-slate-400"></td><td className="border-r border-slate-400"></td><td className="border-r border-slate-400"></td><td className="border-r border-slate-400"></td><td className="border-r border-slate-400"></td><td className="border-r border-slate-400"></td><td></td>
+                             </tr>
+                           ))}
+                        </tbody>
+                        <tfoot className="font-black text-slate-800 bg-slate-50 uppercase tracking-tighter">
+                           <tr className="border-t-2 border-slate-400">
+                              <td colSpan={6} className="p-2 text-right border-r border-slate-400 font-bold uppercase">Total</td>
+                              <td className="p-2 text-right font-black">{printData.totalAmount.toLocaleString()}</td>
+                           </tr>
+                           <tr className="border-t border-slate-300">
+                              <td colSpan={6} className="p-2 text-right border-r border-slate-400 font-bold uppercase">VAT 7%</td>
+                              <td className="p-2 text-right font-black">{(printData.totalAmount * 0.07).toLocaleString()}</td>
+                           </tr>
+                           <tr className="border-t-2 border-slate-400 bg-slate-200">
+                              <td colSpan={6} className="p-3 text-right border-r border-slate-400 font-black text-base uppercase">Grand Total</td>
+                              <td className="p-3 text-right font-black text-base underline underline-offset-2">{(printData.totalAmount * 1.07).toLocaleString()}</td>
+                           </tr>
+                        </tfoot>
+                     </table>
+                  </div>
+
+                  <div className="space-y-10">
+                     <div className="p-6 bg-slate-50 border border-slate-300 text-[10px] text-slate-600 space-y-1 rounded-sm shadow-inner italic text-left">
+                        <p className="font-black text-slate-800 mb-2 uppercase not-italic underline">Notes:</p>
+                        <p>1. Delivery: After receive of PO</p>
+                        <p>2. Payment term: 30 Days after receiving billing note</p>
+                        <p>3. Place of shipment: At Sumino aapico (Thailand) factory</p>
+                     </div>
+
+                     <div className="grid grid-cols-4 border-2 border-slate-400 text-[9px] uppercase font-black text-slate-700 h-44">
+                        <div className="border-r border-slate-400 p-4 flex flex-col justify-between items-center text-center">
+                           <p className="w-full text-left font-bold text-slate-400">Issued By : (จัดซื้อ)</p>
+                           <div className="space-y-1">
+                              {printData.purchasingSign?.dataUrl && <img src={printData.purchasingSign.dataUrl} className="h-14 mx-auto grayscale brightness-50" alt="sign" />}
+                              <p className="border-t border-slate-500 pt-2 px-4 whitespace-nowrap">{printData.purchasingSign?.signerName || '................................'}</p>
+                              <p className="text-[8px] text-slate-400">Date : {printData.purchasingSign?.signedDate || '..../..../....'}</p>
+                           </div>
+                        </div>
+                        <div className="border-r border-slate-400 p-4 flex flex-col justify-between items-center text-center">
+                           <p className="w-full text-left font-bold text-slate-400">Check By : (Manager)</p>
+                           <div className="space-y-1">
+                              {printData.supervisorSign?.dataUrl && <img src={printData.supervisorSign.dataUrl} className="h-14 mx-auto grayscale brightness-50" alt="sign" />}
+                              <p className="border-t border-slate-500 pt-2 px-4 whitespace-nowrap">{printData.supervisorSign?.signerName || '................................'}</p>
+                              <p className="text-[8px] text-slate-400">Date : {printData.supervisorSign?.signedDate || '..../..../....'}</p>
+                           </div>
+                        </div>
+                        <div className="border-r border-slate-400 p-4 flex flex-col justify-between items-center text-center">
+                           <p className="w-full text-left font-bold text-slate-400">Approved By : (MD)</p>
+                           <div className="space-y-1">
+                              {printData.mdSign?.dataUrl && <img src={printData.mdSign.dataUrl} className="h-14 mx-auto grayscale brightness-50" alt="sign" />}
+                              <p className="border-t border-slate-500 pt-2 px-4 whitespace-nowrap">{printData.mdSign?.signerName || '................................'}</p>
+                              <p className="text-[8px] text-slate-400">Date : {printData.mdSign?.signedDate || '..../..../....'}</p>
+                           </div>
+                        </div>
+                        <div className="p-4 flex flex-col justify-between items-center text-center">
+                           <p className="w-full text-left font-bold text-slate-400 italic lowercase tracking-tighter">seller acknowledgement</p>
+                           <div className="space-y-1">
+                              <div className="h-14"></div>
+                              <p className="border-t border-slate-500 pt-2 px-4">................................</p>
+                              <p className="text-[8px] text-slate-400">Date : ..../..../....</p>
+                           </div>
+                        </div>
                      </div>
                   </div>
                </div>
@@ -864,8 +1107,10 @@ const ProcurementModule: React.FC<ProcurementModuleProps> = ({ lang, t }) => {
 
       <style>{`
          @media print {
-            body { background: white !important; }
+            body { background: white !important; font-family: 'Anuphan', sans-serif !important; }
             .no-print { display: none !important; }
+            .print-only { display: block !important; }
+            aside, header, nav, .bg-sky-50 { background: white !important; }
          }
       `}</style>
     </div>
