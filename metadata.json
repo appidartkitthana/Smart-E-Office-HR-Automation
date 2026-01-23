@@ -1,0 +1,8 @@
+{
+  "name": "Smart E-Office & HR Automation",
+  "description": "A comprehensive enterprise-grade platform for HR management, task tracking, and office automation with a beautiful pastel blue aesthetic.",
+  "requestFramePermissions": [
+    "camera",
+    "geolocation"
+  ]
+}
