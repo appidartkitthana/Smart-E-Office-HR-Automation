@@ -1,390 +1,418 @@
 
-import React, { useState, useMemo } from 'react';
-import { MOCK_TASKS, MOCK_EMPLOYEES } from '../constants';
+import React, { useState, useMemo, useEffect } from 'react';
+import { db } from '../services/api';
 import { TaskStatus, Task, Language } from '../types';
-import { Calendar, User, ChevronRight, Search, Filter, X, Check, Plus, AlertCircle, Trash2, Edit3 } from 'lucide-react';
+import { MOCK_EMPLOYEES } from '../constants';
+import { API_CONFIG } from '../config';
+import { 
+  Calendar, User, ChevronRight, Search, Filter, X, 
+  Check, Plus, AlertCircle, Trash2, Edit3, MoreVertical, 
+  FileText, Clock, RefreshCw, Save, CheckCircle, List, ArrowRightCircle
+} from 'lucide-react';
 
-// Add TaskTrackerProps to handle incoming translation props
 interface TaskTrackerProps {
   lang: Language;
   t: any;
 }
 
+const InfoBox: React.FC<{ title: string, value: string | number, icon: React.ReactNode, bgColor: string }> = ({ title, value, icon, bgColor }) => (
+  <div className={`small-box ${bgColor}`}>
+    <div className="inner">
+      <h3>{value}</h3>
+      <p>{title}</p>
+    </div>
+    <div className="icon">{icon}</div>
+    <div className="small-box-footer bg-black/10 py-1 text-center text-[10px] uppercase font-bold cursor-pointer">
+      ดูรายละเอียด <ArrowRightCircle size={10} className="inline ml-1"/>
+    </div>
+  </div>
+);
+
 const TaskTracker: React.FC<TaskTrackerProps> = ({ lang, t }) => {
-  const [tasks, setTasks] = useState<Task[]>(MOCK_TASKS);
+  const [tasks, setTasks] = useState<Task[]>([]);
   const [activeTab, setActiveTab] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
-  const [showFilterModal, setShowFilterModal] = useState(false);
-  
-  // Create/Edit Modal State
-  const [showFormModal, setShowFormModal] = useState(false);
-  const [editingTask, setEditingTask] = useState<Partial<Task> | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [showModal, setShowModal] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
 
-  // Filter States
-  const [filterPriority, setFilterPriority] = useState<string>('All');
-  const [filterAssignee, setFilterAssignee] = useState<string>('All');
-  const [deadlineRange, setDeadlineRange] = useState({ start: '', end: '' });
-
-  const assignees = useMemo(() => ['All', ...Array.from(new Set(MOCK_EMPLOYEES.map(t => t.name)))], []);
-
-  const filteredTasks = tasks.filter(task => {
-    const matchesTab = activeTab === 'all' || 
-      (activeTab === 'todo' && task.status === TaskStatus.TODO) ||
-      (activeTab === 'in-progress' && task.status === TaskStatus.IN_PROGRESS) ||
-      (activeTab === 'completed' && task.status === TaskStatus.COMPLETED);
-    
-    const matchesSearch = task.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
-      task.assignee.toLowerCase().includes(searchQuery.toLowerCase());
-    
-    const matchesPriority = filterPriority === 'All' || task.priority === filterPriority;
-    const matchesAssignee = filterAssignee === 'All' || task.assignee === filterAssignee;
-    
-    let matchesDeadline = true;
-    if (deadlineRange.start) {
-        matchesDeadline = matchesDeadline && new Date(task.deadline) >= new Date(deadlineRange.start);
-    }
-    if (deadlineRange.end) {
-        matchesDeadline = matchesDeadline && new Date(task.deadline) <= new Date(deadlineRange.end);
-    }
-
-    return matchesTab && matchesSearch && matchesPriority && matchesAssignee && matchesDeadline;
+  // Form State
+  const [formData, setFormData] = useState<Partial<Task>>({
+    title: '',
+    assignee: '',
+    priority: 'Medium',
+    status: TaskStatus.TODO,
+    deadline: new Date().toISOString().split('T')[0]
   });
 
-  const handleOpenForm = (task?: Task) => {
-    setEditingTask(task || {
+  const loadTasks = async () => {
+    setIsLoading(true);
+    try {
+      const data = await db.getAll('TASKS');
+      if (data) {
+        // แฟล็กข้อมูลเพื่อให้แน่ใจว่า field ถูกต้อง
+        setTasks(Array.isArray(data) ? data : []);
+      }
+    } catch (e) {
+      console.error("Error loading tasks:", e);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadTasks();
+  }, []);
+
+  const stats = useMemo(() => {
+    return {
+      total: tasks.length,
+      todo: tasks.filter(t => t.status === TaskStatus.TODO).length,
+      inProgress: tasks.filter(t => t.status === TaskStatus.IN_PROGRESS).length,
+      completed: tasks.filter(t => t.status === TaskStatus.COMPLETED).length,
+    };
+  }, [tasks]);
+
+  const filteredTasks = useMemo(() => {
+    return tasks.filter(task => {
+      const matchesTab = activeTab === 'all' || 
+        (activeTab === 'todo' && task.status === TaskStatus.TODO) ||
+        (activeTab === 'in-progress' && task.status === TaskStatus.IN_PROGRESS) ||
+        (activeTab === 'completed' && task.status === TaskStatus.COMPLETED);
+      
+      const matchesSearch = (task.title || '').toLowerCase().includes(searchQuery.toLowerCase()) || 
+        (task.assignee || '').toLowerCase().includes(searchQuery.toLowerCase());
+
+      return matchesTab && matchesSearch;
+    });
+  }, [tasks, activeTab, searchQuery]);
+
+  const handleOpenCreate = () => {
+    setEditingTask(null);
+    setFormData({
       title: '',
       assignee: '',
       priority: 'Medium',
       status: TaskStatus.TODO,
       deadline: new Date().toISOString().split('T')[0]
     });
-    setShowFormModal(true);
+    setShowModal(true);
   };
 
-  const handleSaveTask = (e: React.FormEvent) => {
+  const handleOpenEdit = (task: Task) => {
+    setEditingTask(task);
+    setFormData({ ...task });
+    setShowModal(true);
+  };
+
+  const handleSaveTask = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!editingTask) return;
-
-    if (editingTask.id) {
-      // Edit
-      setTasks(tasks.map(t => t.id === editingTask.id ? (editingTask as Task) : t));
-    } else {
-      // Create
-      const newTask: Task = {
-        ...editingTask as Task,
-        id: Math.random().toString(36).substr(2, 9),
-      };
-      setTasks([newTask, ...tasks]);
+    setIsSaving(true);
+    try {
+      if (editingTask) {
+        // บันทึกการแก้ไข (Update)
+        const result = await db.update('TASKS', editingTask.id, formData);
+        if (!result) throw new Error("Update failed");
+      } else {
+        // สร้างใหม่ (Create)
+        const newTask = {
+          ...formData,
+          id: `T${Date.now()}`
+        };
+        const result = await db.create('TASKS', newTask);
+        if (!result) throw new Error("Create failed");
+      }
+      await loadTasks();
+      setShowModal(false);
+    } catch (e) {
+      alert("เกิดข้อผิดพลาดในการบันทึกข้อมูล กรุณาตรวจสอบสคริปต์ Google Apps Script");
+    } finally {
+      setIsSaving(false);
     }
-    setShowFormModal(false);
-    setEditingTask(null);
   };
 
-  const handleDeleteTask = (id: string) => {
-    if (confirm('ยืนยันการลบงานนี้?')) {
-      setTasks(tasks.filter(t => t.id !== id));
+  const handleQuickStatusChange = async (task: Task, newStatus: TaskStatus) => {
+    // แสดงสถานะกำลังโหลดแบบเจาะจงเฉพาะแถว หรือใช้ global loading
+    setIsLoading(true);
+    try {
+      const updatedData = { ...task, status: newStatus };
+      const result = await db.update('TASKS', task.id, updatedData);
+      if (result) {
+        // อัปเดต state ทันทีเพื่อความลื่นไหลของ UI
+        setTasks(prev => prev.map(t => t.id === task.id ? { ...t, status: newStatus } : t));
+      } else {
+        throw new Error("Update status failed");
+      }
+    } catch (e) {
+      alert("ไม่สามารถเปลี่ยนสถานะได้ กรุณาลองใหม่อีกครั้ง");
+      await loadTasks(); // ย้อนกลับไปค่าเดิมจาก Server
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const clearFilters = () => {
-    setFilterPriority('All');
-    setFilterAssignee('All');
-    setDeadlineRange({ start: '', end: '' });
+  const handleDeleteTask = async (id: string) => {
+    if (!confirm("คุณแน่ใจหรือไม่ว่าต้องการลบงานนี้?")) return;
+    setIsLoading(true);
+    try {
+      const result = await db.delete('TASKS', id);
+      if (result) {
+        await loadTasks();
+      }
+    } catch (e) {
+      alert("Error deleting task");
+      setIsLoading(false);
+    }
   };
 
   return (
-    <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500 pb-10">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-slate-800">ติดตามภารกิจ (Task Tracking)</h1>
-          <p className="text-slate-500">บริหารจัดการงานและติดตามสถานะความคืบหน้า</p>
-        </div>
-        <button 
-            onClick={() => handleOpenForm()}
-            className="bg-sky-500 text-white px-6 py-3 rounded-2xl font-bold shadow-lg shadow-sky-100 hover:bg-sky-600 transition-all flex items-center gap-2"
-        >
-            <Plus size={20} />
-            <span>สร้างงานใหม่</span>
-        </button>
+    <div className="space-y-4 animate-in fade-in duration-500 pb-10">
+      
+      {/* Dashboard Summary Section */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <InfoBox title="งานทั้งหมด" value={stats.total} icon={<List size={60}/>} bgColor="bg-info" />
+        <InfoBox title="รอดำเนินการ" value={stats.todo} icon={<Clock size={60}/>} bgColor="bg-warning" />
+        <InfoBox title="กำลังดำเนินการ" value={stats.inProgress} icon={<RefreshCw size={60}/>} bgColor="bg-primary" />
+        <InfoBox title="เสร็จสมบูรณ์" value={stats.completed} icon={<CheckCircle size={60}/>} bgColor="bg-success" />
       </div>
 
-      {/* Toolbar */}
-      <div className="flex flex-wrap items-center gap-4 bg-white p-4 rounded-2xl border border-sky-100 shadow-sm relative z-10">
-        <div className="flex-1 min-w-[200px] relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-            <input 
-                type="text" 
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="ค้นหาชื่องานหรือพนักงาน..." 
-                className="w-full pl-10 pr-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-sky-200 outline-none"
-            />
-        </div>
-        <div className="flex items-center gap-1 bg-sky-50 p-1 rounded-xl">
-            {['all', 'todo', 'in-progress', 'completed'].map((tab) => (
-                <button 
-                    key={tab}
-                    onClick={() => setActiveTab(tab)}
-                    className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${activeTab === tab ? 'bg-white shadow-sm text-sky-600' : 'text-slate-500 hover:text-slate-700'}`}
-                >
-                    {tab === 'all' ? 'ทั้งหมด' : tab === 'todo' ? 'รอดำเนินการ' : tab === 'in-progress' ? 'กำลังทำ' : 'เสร็จสิ้น'}
-                </button>
-            ))}
+      {/* Control Bar */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-3 rounded shadow-sm border-l-4 border-primary">
+        <div className="flex gap-1 overflow-x-auto scrollbar-hide">
+            <button onClick={() => setActiveTab('all')} className={`whitespace-nowrap px-4 py-1.5 rounded text-xs font-bold transition-all ${activeTab === 'all' ? 'bg-primary text-white shadow' : 'text-gray-600 hover:bg-gray-100'}`}>ทั้งหมด</button>
+            <button onClick={() => setActiveTab('todo')} className={`whitespace-nowrap px-4 py-1.5 rounded text-xs font-bold transition-all ${activeTab === 'todo' ? 'bg-primary text-white shadow' : 'text-gray-600 hover:bg-gray-100'}`}>To Do</button>
+            <button onClick={() => setActiveTab('in-progress')} className={`whitespace-nowrap px-4 py-1.5 rounded text-xs font-bold transition-all ${activeTab === 'in-progress' ? 'bg-primary text-white shadow' : 'text-gray-600 hover:bg-gray-100'}`}>In Progress</button>
+            <button onClick={() => setActiveTab('completed')} className={`whitespace-nowrap px-4 py-1.5 rounded text-xs font-bold transition-all ${activeTab === 'completed' ? 'bg-primary text-white shadow' : 'text-gray-600 hover:bg-gray-100'}`}>Completed</button>
         </div>
         
-        <div className="relative">
+        <div className="flex gap-2 w-full md:w-auto">
+            <div className="relative flex-1 md:w-64">
+                <input 
+                  type="text" 
+                  placeholder="ค้นหาชื่องาน หรือ ผู้รับผิดชอบ..." 
+                  value={searchQuery} 
+                  onChange={(e) => setSearchQuery(e.target.value)} 
+                  className="w-full pl-8 pr-4 py-1.5 text-xs border rounded bg-white outline-none focus:border-primary shadow-sm" 
+                />
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" size={14} />
+            </div>
             <button 
-                onClick={() => setShowFilterModal(!showFilterModal)}
-                className={`flex items-center gap-2 px-4 py-2 border rounded-xl transition-all ${showFilterModal ? 'bg-sky-50 border-sky-300 text-sky-600' : 'border-slate-200 hover:bg-slate-50 text-slate-600'}`}
+              onClick={loadTasks} 
+              disabled={isLoading}
+              className="p-1.5 bg-white border rounded hover:bg-gray-50 text-gray-400 transition-all shadow-sm"
+              title="รีเฟรชข้อมูล"
             >
-                <Filter size={18} />
-                <span className="text-sm font-bold">ตัวกรอง</span>
-                {(filterPriority !== 'All' || filterAssignee !== 'All' || deadlineRange.start || deadlineRange.end) && (
-                    <span className="w-2 h-2 bg-rose-500 rounded-full"></span>
-                )}
+              <RefreshCw size={16} className={isLoading ? 'animate-spin' : ''} />
             </button>
-
-            {showFilterModal && (
-                <div className="absolute right-0 mt-2 w-80 bg-white border border-sky-100 shadow-2xl rounded-2xl p-6 z-50 animate-in fade-in zoom-in-95 duration-200">
-                    <div className="flex items-center justify-between mb-4">
-                        <h4 className="font-bold text-slate-800">ตัวกรองขั้นสูง</h4>
-                        <button onClick={clearFilters} className="text-xs text-sky-600 font-bold hover:underline">ล้างทั้งหมด</button>
-                    </div>
-                    
-                    <div className="space-y-4">
-                        <div>
-                            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 block">ความสำคัญ (Priority)</label>
-                            <div className="flex flex-wrap gap-2">
-                                {['All', 'High', 'Medium', 'Low'].map(p => (
-                                    <button 
-                                        key={p} 
-                                        onClick={() => setFilterPriority(p)}
-                                        className={`px-3 py-1 text-xs rounded-lg border transition-all ${filterPriority === p ? 'bg-sky-400 border-sky-400 text-white font-bold' : 'border-slate-200 text-slate-600 hover:bg-slate-50'}`}
-                                    >
-                                        {p}
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-
-                        <div>
-                            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 block">ผู้รับผิดชอบ (Assignee)</label>
-                            <select 
-                                value={filterAssignee}
-                                onChange={(e) => setFilterAssignee(e.target.value)}
-                                className="w-full p-2 text-sm border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-sky-100"
-                            >
-                                {assignees.map(a => <option key={a} value={a}>{a}</option>)}
-                            </select>
-                        </div>
-
-                        <div>
-                            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 block">ช่วงวันกำหนดส่ง (Deadline)</label>
-                            <div className="flex flex-col gap-2">
-                                <input 
-                                    type="date" 
-                                    value={deadlineRange.start}
-                                    onChange={(e) => setDeadlineRange({...deadlineRange, start: e.target.value})}
-                                    className="w-full p-2 text-sm border border-slate-200 rounded-lg outline-none" 
-                                />
-                                <span className="text-[10px] text-center text-slate-300 font-bold">ถึง</span>
-                                <input 
-                                    type="date" 
-                                    value={deadlineRange.end}
-                                    onChange={(e) => setDeadlineRange({...deadlineRange, end: e.target.value})}
-                                    className="w-full p-2 text-sm border border-slate-200 rounded-lg outline-none" 
-                                />
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <button 
-                        onClick={() => setShowFilterModal(false)}
-                        className="w-full mt-6 py-2 bg-sky-500 text-white rounded-xl font-bold text-sm shadow-lg shadow-sky-100 hover:bg-sky-600 transition-all"
-                    >
-                        ตกลง
-                    </button>
-                </div>
-            )}
+            <button 
+              onClick={handleOpenCreate}
+              className="bg-success text-white px-4 py-1.5 rounded text-xs font-bold flex items-center gap-2 hover:opacity-90 transition-all shadow-md active:scale-95"
+            >
+                <Plus size={16} /> สร้างงานใหม่
+            </button>
         </div>
       </div>
 
-      {/* Task List */}
-      <div className="grid grid-cols-1 gap-4">
-        {filteredTasks.length > 0 ? filteredTasks.map((task) => (
-          <div key={task.id} className="bg-white p-5 rounded-3xl border border-sky-100 shadow-sm hover:shadow-md transition-all group flex items-center justify-between">
-            <div className="flex items-start gap-4 flex-1">
-                <div className={`mt-1 w-3 h-3 rounded-full flex-shrink-0 ${
-                    task.status === TaskStatus.COMPLETED ? 'bg-green-400' : 
-                    task.status === TaskStatus.IN_PROGRESS ? 'bg-sky-400' : 'bg-slate-300'
-                }`} />
-                <div>
-                    <h3 className="font-bold text-slate-800 text-lg group-hover:text-sky-600 transition-colors">{task.title}</h3>
-                    <div className="flex flex-wrap items-center gap-x-6 gap-y-2 mt-2">
-                        <div className="flex items-center gap-1.5 text-sm text-slate-500">
-                            <User size={14} className="text-slate-400" />
-                            <span>{task.assignee}</span>
-                        </div>
-                        <div className="flex items-center gap-1.5 text-sm text-slate-500">
-                            <Calendar size={14} className="text-slate-400" />
-                            <span>กำหนดส่ง: {new Date(task.deadline).toLocaleDateString('th-TH')}</span>
-                        </div>
-                        <div className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${
-                            task.priority === 'High' ? 'bg-rose-100 text-rose-600' : 
-                            task.priority === 'Medium' ? 'bg-amber-100 text-amber-600' : 'bg-slate-100 text-slate-600'
-                        }`}>
-                            {task.priority}
-                        </div>
+      <div className="card border-t-4 border-info shadow-sm">
+        <div className="card-header flex items-center justify-between">
+          <h3 className="text-lg font-normal text-gray-800 flex items-center gap-2">
+            <FileText size={18} className="text-info" /> ระบบติดตามงานอัจฉริยะ (Real-time Tracker)
+          </h3>
+          <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Database: Online</span>
+        </div>
+        <div className="card-body p-0 overflow-x-auto">
+          <table className="table table-striped mb-0">
+            <thead className="bg-gray-50">
+              <tr>
+                <th style={{ width: '10px' }}>#</th>
+                <th style={{ minWidth: '200px' }}>รายละเอียดงาน</th>
+                <th>ผู้รับผิดชอบ</th>
+                <th>ลำดับความสำคัญ</th>
+                <th className="text-center">วันครบกำหนด</th>
+                <th className="text-center" style={{ width: '150px' }}>อัปเดตสถานะ</th>
+                <th className="text-right">จัดการ</th>
+              </tr>
+            </thead>
+            <tbody>
+              {isLoading && tasks.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="py-20 text-center">
+                    <RefreshCw className="animate-spin inline-block mr-2 text-primary" />
+                    <span className="text-gray-400 font-bold uppercase tracking-widest text-[10px]">กำลังซิงค์กับ Google Sheets...</span>
+                  </td>
+                </tr>
+              ) : filteredTasks.map((task, idx) => (
+                <tr key={task.id} className="hover:bg-blue-50/30 transition-colors">
+                  <td className="align-middle text-gray-400">{idx + 1}.</td>
+                  <td className="align-middle">
+                    <div className="font-bold text-gray-800 text-xs">{task.title}</div>
+                    <div className="text-[9px] text-gray-400 font-black uppercase tracking-tighter">ID: {task.id}</div>
+                  </td>
+                  <td className="align-middle">
+                    <div className="flex items-center gap-2">
+                      <div className="w-7 h-7 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center text-[10px] font-bold text-primary">{task.assignee?.charAt(0)}</div>
+                      <span className="text-xs text-gray-600 font-medium">{task.assignee}</span>
                     </div>
-                </div>
-            </div>
-            
-            <div className="flex items-center gap-2">
-                <div className="text-right hidden sm:block mr-4">
-                    <span className={`text-[10px] font-black uppercase ${
-                        task.status === 'เสร็จสิ้น' ? 'text-green-600' : 
-                        task.status === 'กำลังทำ' ? 'text-sky-600' : 'text-slate-400'
+                  </td>
+                  <td className="align-middle">
+                    <span className={`badge ${
+                        task.priority === 'High' ? 'bg-danger' : 
+                        task.priority === 'Medium' ? 'bg-warning' : 'bg-primary'
                     }`}>
-                        {task.status}
+                        {task.priority === 'High' ? 'สำคัญสูง' : task.priority === 'Medium' ? 'ปานกลาง' : 'ปกติ'}
                     </span>
-                    <div className="w-24 h-1.5 bg-slate-100 rounded-full mt-1 overflow-hidden">
-                        <div 
-                            className={`h-full transition-all duration-1000 ${
-                                task.status === TaskStatus.COMPLETED ? 'bg-green-400 w-full' : 
-                                task.status === TaskStatus.IN_PROGRESS ? 'bg-sky-400 w-1/2' : 'bg-slate-300 w-0'
-                            }`}
-                        />
+                  </td>
+                  <td className="text-center align-middle">
+                    <div className="flex flex-col">
+                       <span className="text-[11px] font-bold text-gray-600 flex items-center justify-center gap-1">
+                          <Calendar size={12} className="text-gray-400"/> {task.deadline || '-'}
+                       </span>
                     </div>
-                </div>
-                <button onClick={() => handleOpenForm(task)} className="p-2 text-slate-300 hover:text-sky-500 hover:bg-sky-50 rounded-xl transition-all">
-                    <Edit3 size={18} />
-                </button>
-                <button onClick={() => handleDeleteTask(task.id)} className="p-2 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all">
-                    <Trash2 size={18} />
-                </button>
-            </div>
-          </div>
-        )) : (
-            <div className="bg-white p-20 rounded-[3rem] border border-dashed border-sky-200 text-center flex flex-col items-center justify-center">
-                <div className="w-16 h-16 bg-sky-50 rounded-full flex items-center justify-center text-sky-400 mb-4">
-                    <X size={32} />
-                </div>
-                <h3 className="text-lg font-bold text-slate-600">ไม่พบภารกิจที่ตรงตามเงื่อนไข</h3>
-                <p className="text-slate-400">ลองล้างตัวกรองหรือเปลี่ยนคำค้นหา</p>
-                <button onClick={clearFilters} className="mt-4 px-6 py-2 bg-sky-100 text-sky-600 rounded-xl font-bold hover:bg-sky-200 transition-colors">
-                    ล้างตัวกรองทั้งหมด
-                </button>
-            </div>
-        )}
+                  </td>
+                  <td className="text-center align-middle">
+                    <select 
+                      value={task.status}
+                      onChange={(e) => handleQuickStatusChange(task, e.target.value as TaskStatus)}
+                      disabled={isLoading}
+                      className={`text-[10px] font-bold uppercase rounded px-2 py-1 outline-none border cursor-pointer transition-all ${
+                        task.status === TaskStatus.COMPLETED ? 'bg-success text-white border-green-600' : 
+                        task.status === TaskStatus.IN_PROGRESS ? 'bg-info text-white border-cyan-600' : 
+                        'bg-gray-100 text-gray-600 border-gray-300'
+                      }`}
+                    >
+                      <option value={TaskStatus.TODO}>To Do</option>
+                      <option value={TaskStatus.IN_PROGRESS}>In Progress</option>
+                      <option value={TaskStatus.COMPLETED}>Completed</option>
+                    </select>
+                  </td>
+                  <td className="text-right align-middle">
+                    <div className="flex justify-end gap-1 px-2">
+                      <button onClick={() => handleOpenEdit(task)} className="p-1.5 bg-info text-white rounded shadow-sm hover:bg-cyan-600 transition-all"><Edit3 size={12}/></button>
+                      <button onClick={() => handleDeleteTask(task.id)} className="p-1.5 bg-danger text-white rounded shadow-sm hover:bg-red-600 transition-all"><Trash2 size={12}/></button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+              {!isLoading && filteredTasks.length === 0 && (
+                <tr>
+                  <td colSpan={7} className="py-12 text-center text-gray-400 italic text-[10px] font-bold uppercase">ไม่พบรายการงาน</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+        <div className="card-footer bg-white border-t p-3 flex justify-between items-center">
+           <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest italic">Sync ID: {API_CONFIG.GOOGLE_SHEET_ID.substring(0, 10)}...</span>
+           <div className="flex items-center gap-3">
+              {isLoading && <span className="text-[10px] font-black text-primary animate-pulse uppercase tracking-[0.2em]">กำลังซิงค์ Cloud...</span>}
+              <button onClick={loadTasks} className="text-xs font-bold text-primary hover:underline flex items-center gap-1 uppercase tracking-widest">
+                <RefreshCw size={12} className={isLoading ? 'animate-spin' : ''} /> ดึงข้อมูลล่าสุด
+              </button>
+           </div>
+        </div>
       </div>
 
-      {/* Create/Edit Task Modal */}
-      {showFormModal && editingTask && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-300">
-           <div className="bg-white w-full max-w-lg rounded-[2.5rem] shadow-2xl p-10 relative animate-in zoom-in-95 duration-200">
-              <button onClick={() => setShowFormModal(false)} className="absolute right-8 top-8 p-2 text-slate-400 hover:bg-slate-50 rounded-full transition-colors"><X size={24} /></button>
-              <div className="flex items-center gap-4 mb-8">
-                 <div className="w-14 h-14 bg-sky-400 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-sky-100 transform rotate-3">
-                    <Plus size={28} />
-                 </div>
-                 <div>
-                    <h3 className="text-2xl font-black text-slate-800">{editingTask.id ? 'แก้ไขงาน' : 'สร้างงานใหม่'}</h3>
-                    <p className="text-sm text-slate-400 font-medium">ระบุรายละเอียดของภารกิจที่ต้องการติดตาม</p>
-                 </div>
-              </div>
+      {/* Task Creation / Edit Modal */}
+      {showModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
+          <div className="bg-white w-full max-w-lg rounded shadow-2xl overflow-hidden border">
+             <div className="bg-primary px-4 py-3 flex items-center justify-between text-white">
+                <h3 className="text-sm font-bold uppercase tracking-widest flex items-center gap-2">
+                   {editingTask ? <Edit3 size={18}/> : <Plus size={18}/>}
+                   {editingTask ? 'แก้ไขรายละเอียดงาน' : 'สร้างโครงการ/งานใหม่'}
+                </h3>
+                <button onClick={() => setShowModal(false)} className="hover:text-gray-200 transition-colors"><X size={20} /></button>
+             </div>
+             <form onSubmit={handleSaveTask} className="p-6 space-y-4">
+                <div>
+                   <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 block">หัวข้อโครงการ / งาน</label>
+                   <input 
+                     type="text" 
+                     required 
+                     className="w-full p-2.5 text-sm border rounded outline-none focus:border-primary font-bold text-gray-700" 
+                     placeholder="ระบุชื่องาน..."
+                     value={formData.title}
+                     onChange={e => setFormData({...formData, title: e.target.value})}
+                   />
+                </div>
 
-              <form onSubmit={handleSaveTask} className="space-y-6">
-                 <div className="space-y-4">
-                    <div>
-                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 block px-1">หัวข้อภารกิจ (Task Title)</label>
-                        <input 
-                            type="text" 
-                            required
-                            className="w-full p-3 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-semibold outline-none focus:ring-2 focus:ring-sky-200 shadow-sm"
-                            value={editingTask.title || ''}
-                            onChange={(e) => setEditingTask({...editingTask, title: e.target.value})}
-                            placeholder="ระบุชื่องาน..."
-                        />
-                    </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 block">ผู้รับผิดชอบ</label>
+                    <select 
+                      className="w-full p-2.5 text-sm border rounded outline-none focus:border-primary font-bold text-gray-700 bg-white"
+                      value={formData.assignee}
+                      onChange={e => setFormData({...formData, assignee: e.target.value})}
+                      required
+                    >
+                      <option value="">เลือกพนักงาน...</option>
+                      {MOCK_EMPLOYEES.map(emp => (
+                        <option key={emp.id} value={emp.name}>{emp.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 block">วันครบกำหนด</label>
+                    <input 
+                      type="date" 
+                      required 
+                      className="w-full p-2.5 text-sm border rounded outline-none focus:border-primary font-bold text-gray-700" 
+                      value={formData.deadline}
+                      onChange={e => setFormData({...formData, deadline: e.target.value})}
+                    />
+                  </div>
+                </div>
 
-                    <div>
-                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 block px-1">ผู้รับผิดชอบ (Assignee)</label>
-                        <select 
-                            required
-                            className="w-full p-3 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-semibold outline-none focus:ring-2 focus:ring-sky-200 shadow-sm"
-                            value={editingTask.assignee || ''}
-                            onChange={(e) => setEditingTask({...editingTask, assignee: e.target.value})}
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 block">ความสำคัญ</label>
+                    <div className="flex gap-2">
+                      {['High', 'Medium', 'Low'].map(p => (
+                        <button 
+                          key={p} 
+                          type="button"
+                          onClick={() => setFormData({...formData, priority: p as any})}
+                          className={`flex-1 py-2 rounded text-[10px] font-black uppercase transition-all ${formData.priority === p ? (p === 'High' ? 'bg-danger text-white' : p === 'Medium' ? 'bg-warning text-white' : 'bg-primary text-white') : 'bg-gray-100 text-gray-400'}`}
                         >
-                            <option value="">เลือกพนักงาน...</option>
-                            {MOCK_EMPLOYEES.map(emp => (
-                                <option key={emp.id} value={emp.name}>{emp.name}</option>
-                            ))}
-                        </select>
+                          {p === 'High' ? 'สูง' : p === 'Medium' ? 'กลาง' : 'ปกติ'}
+                        </button>
+                      ))}
                     </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                        <div>
-                            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 block px-1">ความสำคัญ (Priority)</label>
-                            <select 
-                                className="w-full p-3 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-semibold outline-none"
-                                value={editingTask.priority || 'Medium'}
-                                onChange={(e) => setEditingTask({...editingTask, priority: e.target.value as any})}
-                            >
-                                <option value="High">สูง (High)</option>
-                                <option value="Medium">ปานกลาง (Medium)</option>
-                                <option value="Low">ต่ำ (Low)</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 block px-1">วันกำหนดส่ง (Deadline)</label>
-                            <input 
-                                type="date" 
-                                required
-                                className="w-full p-3 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-semibold outline-none"
-                                value={editingTask.deadline || ''}
-                                onChange={(e) => setEditingTask({...editingTask, deadline: e.target.value})}
-                            />
-                        </div>
-                    </div>
-
-                    <div>
-                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 block px-1">สถานะปัจจุบัน</label>
-                        <div className="flex gap-2">
-                            {Object.values(TaskStatus).map(status => (
-                                <button
-                                    key={status}
-                                    type="button"
-                                    onClick={() => setEditingTask({...editingTask, status})}
-                                    className={`flex-1 py-2 text-[10px] font-black uppercase rounded-xl border transition-all ${
-                                        editingTask.status === status 
-                                        ? 'bg-sky-500 border-sky-500 text-white shadow-md' 
-                                        : 'bg-white border-slate-100 text-slate-400 hover:bg-sky-50'
-                                    }`}
-                                >
-                                    {status}
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-                 </div>
-
-                 <div className="pt-6 flex gap-4">
-                    <button 
-                        type="button" 
-                        onClick={() => setShowFormModal(false)} 
-                        className="flex-1 py-4 text-slate-500 font-bold hover:bg-slate-50 rounded-2xl transition-all"
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 block">สถานะ</label>
+                    <select 
+                      className="w-full p-2.5 text-sm border rounded outline-none focus:border-primary font-bold text-gray-700 bg-white"
+                      value={formData.status}
+                      onChange={e => setFormData({...formData, status: e.target.value as any})}
                     >
-                        ยกเลิก
-                    </button>
-                    <button 
-                        type="submit" 
-                        className="flex-[2] py-4 bg-sky-500 text-white font-black rounded-2xl shadow-xl shadow-sky-100 hover:bg-sky-600 transition-all text-lg"
-                    >
-                        {editingTask.id ? 'บันทึกการแก้ไข' : 'สร้างงานใหม่'}
-                    </button>
-                 </div>
-              </form>
-           </div>
+                      <option value={TaskStatus.TODO}>To Do</option>
+                      <option value={TaskStatus.IN_PROGRESS}>In Progress</option>
+                      <option value={TaskStatus.COMPLETED}>Completed</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="pt-4 flex gap-2">
+                   <button 
+                    type="button" 
+                    onClick={() => setShowModal(false)} 
+                    className="flex-1 py-3 text-xs font-bold text-gray-500 bg-gray-100 rounded hover:bg-gray-200 transition-all uppercase tracking-widest"
+                   >
+                     ยกเลิก
+                   </button>
+                   <button 
+                    type="submit" 
+                    disabled={isSaving}
+                    className="flex-[2] py-3 text-xs font-bold text-white bg-primary rounded hover:bg-blue-600 transition-all shadow-lg uppercase tracking-widest flex items-center justify-center gap-2"
+                   >
+                     {isSaving ? <RefreshCw size={16} className="animate-spin" /> : <Save size={16} />}
+                     {isSaving ? 'กำลังบันทึก...' : (editingTask ? 'อัปเดตงาน' : 'สร้างงาน')}
+                   </button>
+                </div>
+             </form>
+          </div>
         </div>
       )}
     </div>

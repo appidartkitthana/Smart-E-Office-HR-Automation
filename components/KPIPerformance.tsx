@@ -11,7 +11,8 @@ interface KPIPerformanceProps {
 }
 
 const KPIPerformance: React.FC<KPIPerformanceProps> = ({ lang, t }) => {
-  const [kpis, setKpis] = useState<KPI[]>(MOCK_KPI);
+  // Fix: Explicitly cast MOCK_KPI to KPI[] to resolve type mismatch from inferred string status property
+  const [kpis, setKpis] = useState<KPI[]>(MOCK_KPI as KPI[]);
   const [showModal, setShowModal] = useState(false);
   const [currentKpi, setCurrentKpi] = useState<Partial<KPI> | null>(null);
   const [searchQuery, setSearchQuery] = useState('');

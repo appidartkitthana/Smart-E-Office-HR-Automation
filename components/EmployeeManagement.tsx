@@ -1,131 +1,117 @@
 
-import React, { useState } from 'react';
-import { MOCK_EMPLOYEES, DEPARTMENTS } from '../constants';
+import React, { useState, useEffect } from 'react';
+import { DEPARTMENTS } from '../constants';
 import { Employee, UserRole, Language } from '../types';
-import { Users, UserPlus, Mail, Phone, MapPin, Search, ChevronRight, Edit2, X, Settings2 } from 'lucide-react';
+import { db } from '../services/api';
+import { 
+  Users, UserPlus, Search, X, Settings2, RefreshCw, Trash2, Edit3, 
+  UserCheck, Zap, ShieldCheck, Briefcase, IdCard, Contact, 
+  FileCheck, AlertCircle, Save, Mail, Phone, MapPin
+} from 'lucide-react';
 
-// Add EmployeeManagementProps to handle incoming translation props
 interface EmployeeManagementProps {
   lang: Language;
   t: any;
 }
 
 const EmployeeManagement: React.FC<EmployeeManagementProps> = ({ lang, t }) => {
-  const [employees, setEmployees] = useState<Employee[]>(MOCK_EMPLOYEES);
+  const [employees, setEmployees] = useState<Employee[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [activeDept, setActiveDept] = useState('ทั้งหมด');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [editingEmployee, setEditingEmployee] = useState<Partial<Employee> | null>(null);
 
-  const filteredEmployees = employees.filter(emp => {
-    const matchesDept = activeDept === 'ทั้งหมด' || emp.department === activeDept;
-    const matchesSearch = emp.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-      emp.position.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesDept && matchesSearch;
-  });
+  useEffect(() => { loadEmployees(); }, []);
 
-  const getDeptCount = (dept: string) => employees.filter(e => e.department === dept).length;
-
-  const handleEdit = (emp: Employee) => {
-    setEditingEmployee(emp);
-    setShowEditModal(true);
+  const loadEmployees = async () => {
+    setIsLoading(true);
+    const data = await db.getAll('EMPLOYEES');
+    setEmployees(data);
+    setIsLoading(false);
   };
 
-  const handleSave = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!editingEmployee) return;
-    setEmployees(employees.map(e => e.id === editingEmployee.id ? (editingEmployee as Employee) : e));
-    setShowEditModal(false);
-  };
+  const filteredEmployees = employees.filter(emp => activeDept === 'ทั้งหมด' || emp.department === activeDept);
+
+  if (isLoading) return <div className="text-center p-10"><RefreshCw className="animate-spin inline mr-2"/> Loading...</div>;
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-500">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-slate-800">จัดการบุคลากร (Employee Management)</h1>
-          <p className="text-slate-500">ฐานข้อมูลพนักงานและการจัดการแผนก</p>
+    <div className="space-y-6 animate-in fade-in duration-500">
+      {/* Page Header */}
+      <div className="flex justify-between items-center mb-4">
+        <div className="flex flex-wrap gap-2">
+          {DEPARTMENTS.map(dept => (
+            <button key={dept} onClick={() => setActiveDept(dept)} className={`px-3 py-1 text-xs font-bold rounded ${activeDept === dept ? 'bg-primary text-white' : 'bg-white border text-gray-600 hover:bg-gray-50'}`}>
+              {dept}
+            </button>
+          ))}
         </div>
-        <button className="bg-sky-500 text-white px-6 py-3 rounded-2xl font-bold shadow-lg shadow-sky-100 hover:bg-sky-600 transition-all flex items-center gap-2">
-            <UserPlus size={20} />
-            <span>เพิ่มพนักงานใหม่</span>
+        <button className="bg-success text-white px-4 py-1.5 rounded text-xs font-bold flex items-center gap-1.5 hover:bg-green-600 shadow-sm">
+          <UserPlus size={14} /> Add New Employee
         </button>
       </div>
 
-      {/* Dept Count Dashboard */}
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
-        {DEPARTMENTS.filter(d => d !== 'ทั้งหมด').map(dept => (
-           <div key={dept} className="bg-white p-4 rounded-3xl border border-sky-100 shadow-sm text-center">
-              <p className="text-[10px] font-black text-slate-400 uppercase mb-1">{dept}</p>
-              <h4 className="text-xl font-black text-sky-600">{getDeptCount(dept)}</h4>
-           </div>
-        ))}
-      </div>
-
-      <div className="flex flex-col gap-4">
-          <div className="flex flex-wrap items-center gap-2">
-              {DEPARTMENTS.map(dept => (
-                  <button key={dept} onClick={() => setActiveDept(dept)} className={`px-5 py-2 rounded-xl text-sm font-bold transition-all ${activeDept === dept ? 'bg-sky-500 text-white shadow-lg shadow-sky-100' : 'bg-white text-slate-500 hover:bg-sky-50 border border-sky-100'}`}>
-                      {dept} {dept !== 'ทั้งหมด' && <span className="ml-1 opacity-60">({getDeptCount(dept)})</span>}
-                  </button>
-              ))}
-          </div>
-          <div className="relative">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
-              <input type="text" placeholder="ค้นหาพนักงานด้วยชื่อ หรือตำแหน่ง..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full pl-12 pr-4 py-3 bg-white rounded-2xl border border-sky-100 shadow-sm outline-none" />
-          </div>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {filteredEmployees.map(emp => (
-              <div key={emp.id} className="bg-white rounded-[2.5rem] border border-sky-100 shadow-sm p-6 hover:shadow-xl transition-all group relative">
-                  <button onClick={() => handleEdit(emp)} className="absolute top-6 right-6 p-2 text-slate-300 hover:text-sky-500 hover:bg-sky-50 rounded-xl transition-all opacity-0 group-hover:opacity-100"><Settings2 size={18} /></button>
-                  <div className="flex items-center gap-4 mb-4">
-                      <img src={emp.avatar} className="w-16 h-16 rounded-2xl object-cover shadow-sm border-2 border-sky-50" alt="" />
-                      <div>
-                          <h4 className="font-bold text-slate-800 text-lg">{emp.name}</h4>
-                          <p className="text-sm text-sky-500 font-bold">{emp.position}</p>
+              <div key={emp.id} className="card overflow-hidden">
+                  <div className="h-20 bg-primary/10 border-b border-gray-100 flex items-end justify-center pb-2">
+                     <img src={emp.avatar || `https://picsum.photos/seed/${emp.id}/100/100`} className="w-20 h-20 rounded-full border-4 border-white shadow-sm object-cover bg-white -mb-8 z-10" alt="" />
+                  </div>
+                  <div className="card-body pt-10 text-center pb-4">
+                      <h4 className="text-lg font-bold text-gray-800 m-0">{emp.name}</h4>
+                      <p className="text-xs text-gray-500 mb-4">{emp.position}</p>
+                      
+                      <div className="flex justify-center gap-3 py-3 border-t border-gray-50">
+                         <div className="text-center px-4">
+                            <p className="text-sm font-bold text-gray-700">{emp.department}</p>
+                            <p className="text-[10px] text-gray-400 uppercase font-bold">Dept</p>
+                         </div>
+                         <div className="border-l border-gray-100"></div>
+                         <div className="text-center px-4">
+                            <p className="text-sm font-bold text-gray-700">{emp.id}</p>
+                            <p className="text-[10px] text-gray-400 uppercase font-bold">ID</p>
+                         </div>
                       </div>
                   </div>
-                  <div className="grid grid-cols-2 gap-2 pt-4 border-t border-slate-50">
-                      <div className="text-[10px] font-black text-slate-400 uppercase">แผนก: <span className="text-slate-600 ml-1">{emp.department}</span></div>
-                      <div className="text-[10px] font-black text-slate-400 uppercase">สิทธิ: <span className="text-sky-600 ml-1">{emp.role}</span></div>
+                  <div className="card-footer flex gap-2 p-2">
+                      <button className="flex-1 py-1.5 bg-info text-white text-[10px] font-bold rounded flex items-center justify-center gap-1 hover:bg-cyan-600"><Edit3 size={10}/> EDIT</button>
+                      <button className="flex-1 py-1.5 bg-danger text-white text-[10px] font-bold rounded flex items-center justify-center gap-1 hover:bg-red-600"><Trash2 size={10}/> REMOVE</button>
                   </div>
-                  <div className="mt-4"><span className={`px-2 py-1 rounded-lg text-[10px] font-black uppercase ${emp.status === 'Active' ? 'bg-emerald-100 text-emerald-600' : 'bg-rose-100 text-rose-600'}`}>{emp.status}</span></div>
               </div>
           ))}
       </div>
 
-      {showEditModal && editingEmployee && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
-          <div className="bg-white w-full max-w-lg rounded-[2.5rem] shadow-2xl p-10 relative">
-            <button onClick={() => setShowEditModal(false)} className="absolute right-8 top-8 p-2 text-slate-400"><X size={24} /></button>
-            <h3 className="text-2xl font-black text-slate-800 mb-8">แก้ไขข้อมูลพนักงาน</h3>
-            <form onSubmit={handleSave} className="space-y-6">
-               <div><label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 block">ตำแหน่ง</label><input type="text" className="w-full p-3 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-semibold" value={editingEmployee.position || ''} onChange={e => setEditingEmployee({...editingEmployee, position: e.target.value})} /></div>
-               <div className="grid grid-cols-2 gap-4">
-                  <div><label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 block">แผนก</label>
-                    <select className="w-full p-3 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-semibold" value={editingEmployee.department || ''} onChange={e => setEditingEmployee({...editingEmployee, department: e.target.value})}>
-                       {DEPARTMENTS.filter(d => d !== 'ทั้งหมด').map(d => <option key={d} value={d}>{d}</option>)}
-                    </select>
-                  </div>
-                  <div><label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 block">ระดับสิทธิ (Role)</label>
-                    <select className="w-full p-3 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-semibold" value={editingEmployee.role || UserRole.EMPLOYEE} onChange={e => setEditingEmployee({...editingEmployee, role: e.target.value as UserRole})}>
-                       {Object.values(UserRole).map(r => <option key={r} value={r}>{r}</option>)}
-                    </select>
-                  </div>
-               </div>
-               <div><label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 block">สถานะ</label>
-                  <select className="w-full p-3 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-semibold" value={editingEmployee.status || 'Active'} onChange={e => setEditingEmployee({...editingEmployee, status: e.target.value as any})}>
-                     <option value="Active">ทำงานปกติ (Active)</option>
-                     <option value="On Leave">ลางาน (On Leave)</option>
-                     <option value="Terminated">พ้นสภาพ (Terminated)</option>
-                  </select>
-               </div>
-               <button type="submit" className="w-full py-4 bg-sky-500 text-white font-black rounded-2xl shadow-lg">บันทึกการเปลี่ยนแปลง</button>
-            </form>
+      {/* List View - AdminLTE Data Table Style */}
+      <div className="card border-t-4 border-info mt-8">
+          <div className="card-header">
+             <h3 className="text-lg font-normal text-gray-800">Complete Employee Directory</h3>
           </div>
-        </div>
-      )}
+          <div className="card-body p-0">
+              <table className="table table-striped mb-0">
+                  <thead>
+                    <tr>
+                      <th style={{width: '60px'}}>Avatar</th>
+                      <th>Name</th>
+                      <th>Department</th>
+                      <th>Position</th>
+                      <th>Status</th>
+                      <th className="text-right">Access Role</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredEmployees.map(emp => (
+                      <tr key={emp.id}>
+                        <td><img src={emp.avatar} className="w-8 h-8 rounded-full border border-gray-200" /></td>
+                        <td className="font-bold text-gray-700">{emp.name}</td>
+                        <td>{emp.department}</td>
+                        <td>{emp.position}</td>
+                        <td>
+                          <span className={`badge ${emp.status === 'Active' ? 'bg-success' : 'bg-danger'}`}>{emp.status}</span>
+                        </td>
+                        <td className="text-right font-bold text-primary text-xs">{emp.role}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+              </table>
+          </div>
+      </div>
     </div>
   );
 };

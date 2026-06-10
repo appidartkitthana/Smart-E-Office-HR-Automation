@@ -5,10 +5,9 @@ import { DocumentRequest, Language } from '../types';
 import { 
   Files, Search, Filter, Plus, FileText, ChevronRight, 
   Clock, CheckCircle, X, Download, Info, LayoutGrid, 
-  List, MoreHorizontal, ArrowUpRight, BadgeCheck, AlertCircle
+  List, MoreHorizontal, ArrowUpRight, BadgeCheck, AlertCircle, FilePlus, Printer, Eye
 } from 'lucide-react';
 
-// Add DocumentRequestModuleProps to handle incoming translation props
 interface DocumentRequestModuleProps {
   lang: Language;
   t: any;
@@ -28,7 +27,7 @@ const DocumentRequestModule: React.FC<DocumentRequestModuleProps> = ({ lang, t }
     { id: 'DR-003', formCode: 'F-HR-057', formName: 'แบบฟอร์มการเบิกสวัสดิการค่ารักษาพยาบาล', requester: 'คุณสมชาย รักดี', date: '2024-05-20', status: 'Approved' },
   ]);
 
-  const categories = ['ทั้งหมด', ...Array.from(new Set(FORM_CATALOG.map(f => f.category)))];
+  const categories: string[] = ['ทั้งหมด', ...Array.from(new Set(FORM_CATALOG.map(f => f.category)))];
 
   const filteredCatalog = FORM_CATALOG.filter(f => {
     const matchesSearch = f.name.toLowerCase().includes(searchQuery.toLowerCase()) || f.code.toLowerCase().includes(searchQuery.toLowerCase());
@@ -56,272 +55,176 @@ const DocumentRequestModule: React.FC<DocumentRequestModuleProps> = ({ lang, t }
   };
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-500 pb-10">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-slate-800 tracking-tight">ระบบร้องขอเอกสาร (Document Requests)</h1>
-          <p className="text-slate-500 font-medium">ยื่นคำร้องและติดตามสถานะเอกสารดำเนินการฝ่ายบุคคล</p>
+    <div className="space-y-4 animate-in fade-in duration-500">
+      {/* Search and Navigation Bar */}
+      <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-2">
+        <div className="flex gap-1 bg-white p-1 rounded border shadow-sm">
+           <button 
+             onClick={() => setActiveTab('catalog')} 
+             className={`px-4 py-1.5 text-xs font-bold rounded ${activeTab === 'catalog' ? 'bg-primary text-white shadow-sm' : 'text-gray-600 hover:bg-gray-100'}`}
+           >
+             {lang === 'TH' ? 'แบบฟอร์ม' : lang === 'JP' ? 'フォーム' : 'Forms'}
+           </button>
+           <button 
+             onClick={() => setActiveTab('history')} 
+             className={`px-4 py-1.5 text-xs font-bold rounded ${activeTab === 'history' ? 'bg-primary text-white shadow-sm' : 'text-gray-600 hover:bg-gray-100'}`}
+           >
+             {lang === 'TH' ? 'ประวัติคำร้อง' : lang === 'JP' ? '履歴' : 'History'}
+           </button>
         </div>
-        <div className="flex items-center gap-3">
-            <div className="bg-white p-1 rounded-xl border border-sky-100 flex shadow-sm">
-                <button 
-                  onClick={() => setViewMode('grid')}
-                  className={`p-2 rounded-lg transition-all ${viewMode === 'grid' ? 'bg-sky-500 text-white shadow-md' : 'text-slate-400 hover:text-sky-500'}`}
-                >
-                  <LayoutGrid size={18} />
-                </button>
-                <button 
-                  onClick={() => setViewMode('table')}
-                  className={`p-2 rounded-lg transition-all ${viewMode === 'table' ? 'bg-sky-500 text-white shadow-md' : 'text-slate-400 hover:text-sky-500'}`}
-                >
-                  <List size={18} />
-                </button>
-            </div>
-        </div>
-      </div>
 
-      {/* Tabs */}
-      <div className="flex bg-white p-1.5 rounded-2xl border border-sky-100 w-fit shadow-sm">
-        <button 
-          onClick={() => setActiveTab('catalog')}
-          className={`px-8 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center gap-2 ${activeTab === 'catalog' ? 'bg-sky-500 text-white shadow-lg shadow-sky-100' : 'text-slate-500 hover:bg-sky-50'}`}
-        >
-          <Files size={18} /> แบบฟอร์มที่มีให้
-        </button>
-        <button 
-          onClick={() => setActiveTab('history')}
-          className={`px-8 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center gap-2 ${activeTab === 'history' ? 'bg-sky-500 text-white shadow-lg shadow-sky-100' : 'text-slate-500 hover:bg-sky-50'}`}
-        >
-          <Clock size={18} /> ติดตามสถานะคำร้อง
-        </button>
-      </div>
-
-      {/* Search & Filters */}
-      <div className="flex flex-col md:flex-row items-center gap-4">
-        <div className="relative flex-1 w-full">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-          <input 
-            type="text" 
-            placeholder="ค้นหารหัส F-HR หรือชื่อเอกสาร..." 
-            value={searchQuery}
-            onChange={e => setSearchQuery(e.target.value)}
-            className="w-full pl-12 pr-4 py-3 bg-white border border-sky-100 rounded-2xl outline-none shadow-sm focus:ring-4 focus:ring-sky-500/5 transition-all"
-          />
-        </div>
-        <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-hide w-full md:w-auto">
-           {categories.map(cat => (
-             <button 
-                key={cat}
-                onClick={() => setActiveCategory(cat)}
-                className={`px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all border ${activeCategory === cat ? 'bg-sky-500 text-white border-sky-500 shadow-md shadow-sky-100' : 'bg-white text-slate-500 border-slate-100 hover:border-sky-200 hover:bg-sky-50/50'}`}
-             >
-               {cat}
-             </button>
-           ))}
+        <div className="flex items-center gap-2 w-full md:w-auto">
+           <div className="relative flex-1 md:w-64">
+              <input 
+                type="text" 
+                placeholder="Search forms..." 
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                className="w-full pl-8 pr-4 py-1.5 text-xs border rounded bg-white outline-none focus:border-primary"
+              />
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" size={14} />
+           </div>
+           <select 
+             value={activeCategory} 
+             onChange={e => setActiveCategory(e.target.value)}
+             className="px-3 py-1.5 text-xs border rounded bg-white font-bold text-gray-600 outline-none"
+           >
+             {categories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+           </select>
         </div>
       </div>
 
       {activeTab === 'catalog' ? (
-        viewMode === 'grid' ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-             {filteredCatalog.map(form => (
-               <div key={form.code} className="bg-white p-6 rounded-[2.5rem] border border-sky-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all group relative flex flex-col justify-between">
-                  <div>
-                    <div className="flex items-start justify-between mb-4">
-                       <div className="p-4 bg-sky-50 text-sky-500 rounded-2xl group-hover:bg-sky-500 group-hover:text-white transition-all shadow-inner">
-                          <FileText size={24} />
-                       </div>
-                       <span className="text-[9px] font-black text-slate-300 uppercase tracking-[0.2em]">{form.category}</span>
-                    </div>
-                    <h3 className="font-bold text-slate-800 text-sm leading-relaxed mb-1 min-h-[2.5rem] line-clamp-2">{form.name}</h3>
-                    <p className="text-[10px] font-black text-sky-400 uppercase tracking-widest mb-6">{form.code}</p>
-                  </div>
-                  <button 
-                    onClick={() => handleRequest(form)}
-                    className="w-full py-3 bg-slate-50 text-slate-500 rounded-2xl font-bold text-xs hover:bg-sky-500 hover:text-white transition-all flex items-center justify-center gap-2 group/btn"
-                  >
-                    <Plus size={14} className="group-hover/btn:rotate-90 transition-transform" /> เริ่มยื่นคำร้อง
-                  </button>
-               </div>
-             ))}
+        <div className="card border-t-4 border-info">
+          <div className="card-header flex items-center justify-between">
+             <h3 className="text-lg font-normal text-gray-800 flex items-center gap-2">
+                <Files size={18} className="text-info" /> Form Catalog
+             </h3>
+             <div className="card-tools flex gap-1">
+                <button onClick={() => setViewMode('grid')} className={`p-1.5 rounded ${viewMode === 'grid' ? 'bg-gray-100' : ''}`}><LayoutGrid size={16}/></button>
+                <button onClick={() => setViewMode('table')} className={`p-1.5 rounded ${viewMode === 'table' ? 'bg-gray-100' : ''}`}><List size={16}/></button>
+             </div>
           </div>
-        ) : (
-          /* Catalog Table View */
-          <div className="bg-white rounded-[2.5rem] border border-sky-100 shadow-sm overflow-hidden animate-in slide-in-from-bottom-4 duration-500">
-             <table className="w-full text-left">
+          <div className="card-body p-0">
+            {viewMode === 'table' ? (
+              <table className="table table-striped mb-0">
                 <thead>
-                  <tr className="bg-sky-50/50">
-                     <th className="px-8 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">รหัสแบบฟอร์ม</th>
-                     <th className="px-8 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">ชื่อเอกสาร / รายการคำร้อง</th>
-                     <th className="px-8 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">หมวดหมู่</th>
-                     <th className="px-8 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">ดำเนินการ</th>
+                  <tr>
+                    <th style={{width: '120px'}}>Form Code</th>
+                    <th>Document Description</th>
+                    <th>Category</th>
+                    <th className="text-right">Action</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-50">
-                   {filteredCatalog.map(form => (
-                     <tr key={form.code} className="hover:bg-sky-50/40 transition-colors group">
-                        <td className="px-8 py-6">
-                           <span className="text-xs font-black text-sky-500 bg-sky-50 px-3 py-1.5 rounded-xl border border-sky-100 group-hover:bg-sky-500 group-hover:text-white transition-all">
-                              {form.code}
-                           </span>
-                        </td>
-                        <td className="px-8 py-6">
-                           <span className="text-sm font-bold text-slate-700 group-hover:text-sky-600 transition-colors">{form.name}</span>
-                        </td>
-                        <td className="px-8 py-6">
-                           <span className="px-3 py-1 rounded-full bg-slate-100 text-slate-500 text-[10px] font-black uppercase tracking-tighter">
-                              {form.category}
-                           </span>
-                        </td>
-                        <td className="px-8 py-6 text-right">
-                           <button 
-                             onClick={() => handleRequest(form)}
-                             className="p-3 bg-slate-50 text-slate-400 hover:bg-sky-500 hover:text-white rounded-2xl transition-all shadow-sm"
-                           >
-                              <ArrowUpRight size={18} />
-                           </button>
-                        </td>
-                     </tr>
-                   ))}
+                <tbody>
+                  {filteredCatalog.map(form => (
+                    <tr key={form.code}>
+                      <td className="font-bold text-info">{form.code}</td>
+                      <td className="text-gray-700">{form.name}</td>
+                      <td><span className={`badge ${form.category === 'HR' ? 'bg-danger' : 'bg-gray-500'}`}>{form.category}</span></td>
+                      <td className="text-right">
+                        <button onClick={() => handleRequest(form)} className="btn btn-sm bg-primary text-white px-3 py-1 rounded text-[10px] font-bold uppercase hover:bg-blue-600">
+                           <FilePlus size={10} className="inline mr-1" /> Request
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
                 </tbody>
-             </table>
-          </div>
-        )
-      ) : (
-        /* History Table View - Enhanced */
-        <div className="bg-white rounded-[2.5rem] border border-sky-100 shadow-sm overflow-hidden animate-in slide-in-from-bottom-4 duration-500">
-           <table className="w-full text-left">
-              <thead>
-                <tr className="bg-sky-50/50">
-                   <th className="px-8 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">เลขที่อ้างอิง</th>
-                   <th className="px-8 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">ชื่อเอกสาร</th>
-                   <th className="px-8 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">วันที่ร้องขอ</th>
-                   <th className="px-8 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">สถานะปัจจุบัน</th>
-                   <th className="px-8 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">การจัดการ</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-50">
-                 {history.map(req => (
-                   <tr key={req.id} className="hover:bg-sky-50/40 transition-colors group">
-                      <td className="px-8 py-6">
-                         <span className="text-xs font-black text-slate-400">#{req.id}</span>
-                      </td>
-                      <td className="px-8 py-6">
-                         <div className="flex items-center gap-4">
-                            <div className="p-3 bg-sky-50 text-sky-400 rounded-xl group-hover:bg-white transition-colors">
-                               <FileText size={18} />
-                            </div>
-                            <div>
-                               <span className="text-sm font-bold text-slate-700 block mb-0.5">{req.formName}</span>
-                               <span className="text-[10px] font-black text-sky-500 uppercase tracking-widest">{req.formCode}</span>
-                            </div>
-                         </div>
-                      </td>
-                      <td className="px-8 py-6">
-                         <span className="text-sm text-slate-500 font-medium">{req.date}</span>
-                      </td>
-                      <td className="px-8 py-6">
-                         <div className={`flex items-center gap-2 px-3 py-1.5 rounded-xl w-fit ${
-                           req.status === 'Completed' ? 'bg-emerald-50 text-emerald-600' :
-                           req.status === 'Approved' ? 'bg-sky-50 text-sky-600' :
-                           req.status === 'Pending' ? 'bg-amber-50 text-amber-600' : 'bg-rose-50 text-rose-600'
-                         }`}>
-                           {req.status === 'Completed' ? <BadgeCheck size={14} /> : 
-                            req.status === 'Pending' ? <Clock size={14} className="animate-spin-slow" /> : 
-                            req.status === 'Approved' ? <CheckCircle size={14} /> : <AlertCircle size={14} />}
-                           <span className="text-[10px] font-black uppercase tracking-wider">
-                             {req.status === 'Completed' ? 'เสร็จสิ้น' : 
-                              req.status === 'Pending' ? 'รอดำเนินการ' : 
-                              req.status === 'Approved' ? 'อนุมัติแล้ว' : 'ปฏิเสธ'}
-                           </span>
-                         </div>
-                      </td>
-                      <td className="px-8 py-6 text-right">
-                         <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                            {req.status === 'Completed' ? (
-                               <button className="p-2.5 text-emerald-500 hover:bg-emerald-50 rounded-xl transition-all" title="ดาวน์โหลดไฟล์">
-                                  <Download size={18} />
-                               </button>
-                            ) : null}
-                            <button className="p-2.5 text-slate-300 hover:text-sky-500 hover:bg-sky-50 rounded-xl transition-all">
-                               <MoreHorizontal size={18} />
-                            </button>
-                         </div>
-                      </td>
-                   </tr>
+              </table>
+            ) : (
+              <div className="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                 {filteredCatalog.map(form => (
+                   <div key={form.code} className="border border-gray-200 rounded p-3 bg-white flex flex-col justify-between hover:shadow-md transition-shadow">
+                      <div>
+                        <div className="flex justify-between items-start mb-2">
+                          <span className="text-[10px] font-bold text-info uppercase tracking-widest">{form.code}</span>
+                          <span className="badge bg-gray-100 text-gray-400 text-[9px]">{form.category}</span>
+                        </div>
+                        <h4 className="text-xs font-bold text-gray-800 line-clamp-2 mb-4">{form.name}</h4>
+                      </div>
+                      <button onClick={() => handleRequest(form)} className="w-full bg-info text-white py-1.5 rounded text-[10px] font-bold hover:bg-cyan-600">
+                        OPEN FORM
+                      </button>
+                   </div>
                  ))}
-              </tbody>
-           </table>
-           {history.length === 0 && (
-             <div className="py-20 text-center flex flex-col items-center justify-center grayscale opacity-50">
-                <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center text-slate-300 mb-4">
-                   <Clock size={32} />
-                </div>
-                <p className="text-sm font-bold text-slate-400">ยังไม่มีประวัติการยื่นคำร้อง</p>
-             </div>
-           )}
-        </div>
-      )}
-
-      {/* Request Modal */}
-      {showModal && selectedForm && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-300">
-           <div className="bg-white w-full max-w-lg rounded-[2.5rem] shadow-2xl p-10 relative animate-in zoom-in-95 duration-200">
-              <button onClick={() => setShowModal(false)} className="absolute right-8 top-8 p-2 text-slate-400 hover:bg-slate-50 rounded-full transition-colors"><X size={24} /></button>
-              <div className="flex items-center gap-4 mb-8">
-                 <div className="w-16 h-16 bg-sky-400 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-sky-100 rotate-3">
-                    <Files size={32} />
-                 </div>
-                 <div className="flex-1 min-w-0">
-                    <h3 className="text-2xl font-black text-slate-800 truncate">ยื่นคำร้องเอกสาร</h3>
-                    <p className="text-[10px] font-black text-sky-500 uppercase tracking-widest">{selectedForm.code}</p>
-                 </div>
               </div>
-
-              <form onSubmit={submitRequest} className="space-y-6">
-                 <div className="p-6 bg-sky-50/50 rounded-3xl border border-sky-100 mb-6">
-                    <p className="text-xs font-bold text-sky-700 leading-relaxed text-center italic">
-                       "ท่านกำลังดำเนินการยื่นคำร้องสำหรับ <span className="underline font-black">{selectedForm.name}</span> โปรดระบุข้อมูลความต้องการของท่านด้านล่าง"
-                    </p>
-                 </div>
-
-                 <div className="space-y-4">
-                    <div>
-                       <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 block px-1">พนักงานผู้ร้องขอ (Auto-filled)</label>
-                       <div className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-full bg-sky-200 border-2 border-white shadow-sm flex items-center justify-center text-[10px] font-bold text-sky-600">SR</div>
-                          <span className="text-sm font-bold text-slate-400 tracking-tight">คุณสมชาย รักดี (IT-001)</span>
-                       </div>
-                    </div>
-                    <div>
-                       <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 block px-1">วัตถุประสงค์ในการร้องขอ / หมายเหตุ</label>
-                       <textarea 
-                        required
-                        className="w-full p-5 bg-white border border-sky-100 rounded-3xl text-sm h-32 resize-none outline-none focus:ring-4 focus:ring-sky-500/5 shadow-inner transition-all"
-                        placeholder="เช่น ขอเพื่อนำไปใช้ยื่นกู้ธนาคาร หรือ ติดต่อหน่วยงานราชการ..."
-                       />
-                    </div>
-                 </div>
-
-                 <div className="pt-6 flex gap-4">
-                    <button type="button" onClick={() => setShowModal(false)} className="flex-1 py-4 text-slate-400 font-black rounded-3xl hover:bg-slate-50 transition-all uppercase text-[10px] tracking-[0.2em]">ยกเลิก</button>
-                    <button type="submit" className="flex-[2] py-4 bg-sky-500 text-white font-black rounded-3xl shadow-2xl shadow-sky-200 hover:bg-sky-600 transition-all text-base tracking-tight">ยืนยันการส่งคำร้อง</button>
-                 </div>
-              </form>
+            )}
+          </div>
+        </div>
+      ) : (
+        <div className="card border-t-4 border-success">
+           <div className="card-header">
+              <h3 className="text-lg font-normal text-gray-800">My Requests History</h3>
+           </div>
+           <div className="card-body p-0">
+              <table className="table table-striped mb-0">
+                <thead>
+                  <tr>
+                    <th style={{width: '100px'}}>Req ID</th>
+                    <th>Subject</th>
+                    <th>Date</th>
+                    <th>Status</th>
+                    <th className="text-right">Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {history.map(req => (
+                    <tr key={req.id}>
+                      <td className="font-bold text-gray-400">#{req.id}</td>
+                      <td>
+                         <div className="text-sm font-bold text-gray-700">{req.formName}</div>
+                         <div className="text-[10px] text-gray-400 uppercase">{req.formCode}</div>
+                      </td>
+                      <td className="text-gray-500">{req.date}</td>
+                      <td>
+                         <span className={`badge ${
+                           req.status === 'Completed' ? 'bg-success' : 
+                           req.status === 'Pending' ? 'bg-warning' : 'bg-primary'
+                         }`}>
+                           {req.status}
+                         </span>
+                      </td>
+                      <td className="text-right">
+                         <div className="flex justify-end gap-1">
+                            <button className="p-1.5 bg-info text-white rounded text-[10px] hover:bg-cyan-600"><Eye size={12}/></button>
+                            {req.status === 'Completed' && <button className="p-1.5 bg-gray-600 text-white rounded text-[10px] hover:bg-black"><Printer size={12}/></button>}
+                         </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
            </div>
         </div>
       )}
 
-      <style>{`
-        @keyframes spin-slow {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
-        }
-        .animate-spin-slow {
-          animation: spin-slow 8s linear infinite;
-        }
-      `}</style>
+      {/* AdminLTE Styled Modal */}
+      {showModal && selectedForm && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-300">
+          <div className="bg-white w-full max-w-xl rounded shadow-2xl overflow-hidden border border-gray-300">
+             <div className="bg-primary px-4 py-3 flex items-center justify-between text-white">
+                <h3 className="text-md font-bold flex items-center gap-2">
+                   <FileText size={18}/> New Request: {selectedForm.code}
+                </h3>
+                <button onClick={() => setShowModal(false)} className="hover:text-gray-200"><X size={20} /></button>
+             </div>
+             <form onSubmit={submitRequest} className="p-5">
+                <div className="mb-4">
+                   <label className="text-xs font-bold text-gray-600 mb-1 block">Subject / Description</label>
+                   <input type="text" readOnly value={selectedForm.name} className="w-full p-2 text-sm bg-gray-50 border rounded text-gray-500 font-bold" />
+                </div>
+                <div className="mb-4">
+                   <label className="text-xs font-bold text-gray-600 mb-1 block">Request Details / Justification</label>
+                   <textarea required className="w-full p-2 text-sm border rounded h-32 outline-none focus:border-primary" placeholder="Enter reason for request..." />
+                </div>
+                <div className="flex justify-end gap-2 border-t pt-4">
+                   <button type="button" onClick={() => setShowModal(false)} className="px-4 py-2 text-xs font-bold bg-gray-100 text-gray-600 rounded hover:bg-gray-200">CANCEL</button>
+                   <button type="submit" className="px-6 py-2 text-xs font-bold bg-primary text-white rounded hover:bg-blue-600 shadow-sm">SUBMIT REQUEST</button>
+                </div>
+             </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

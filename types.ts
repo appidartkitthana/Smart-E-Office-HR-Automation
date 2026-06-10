@@ -15,6 +15,25 @@ export enum UserRole {
   EMPLOYEE = 'Employee'
 }
 
+export interface ActivityLog {
+  id: string;
+  timestamp: string;
+  user: string;
+  action: string;
+  details: string;
+}
+
+export interface CompanyActivity {
+  id: string;
+  title: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+  location: string;
+  participants: string; // Comma-separated names
+  details: string;
+}
+
 export interface Task {
   id: string;
   title: string;
@@ -22,6 +41,22 @@ export interface Task {
   priority: 'High' | 'Medium' | 'Low';
   status: TaskStatus;
   deadline: string;
+}
+
+export interface Employee {
+  id: string;
+  empNo: string;
+  nameThai: string;
+  nameEng: string;
+  dept: string;
+  pos: string;
+  startWorking: string;
+  name?: string;
+  department?: string;
+  position?: string;
+  status?: 'Active' | 'Inactive';
+  role?: UserRole;
+  avatar?: string;
 }
 
 export interface AttendanceRecord {
@@ -32,39 +67,26 @@ export interface AttendanceRecord {
   checkOut?: string;
   location: string;
   status: 'Normal' | 'Late' | 'Absent';
+  coords?: string;
 }
 
-export type ApprovalType = 
-  | 'Leave' 
-  | 'Expense' 
-  | 'OT' 
-  | 'Certificate'
-  | 'F-HR-002' 
-  | 'F-HR-007' 
-  | 'F-HR-011' 
-  | 'F-HR-057' 
-  | 'F-HR-063';
+export interface CompanyLocation {
+  id: string;
+  address: string;
+  latitude: number;
+  longitude: number;
+  radius: number;
+}
+
+export type ApprovalType = 'Leave' | 'Expense' | 'OT' | 'F-HR-002' | 'F-HR-007' | 'F-HR-011' | 'F-HR-057' | 'F-HR-063';
 
 export interface ApprovalRequest {
   id: string;
+  title: string;
   requester: string;
   type: ApprovalType;
-  title: string;
-  status: 'Pending' | 'Approved' | 'Rejected';
   date: string;
-  amount?: number;
-  formId?: string;
-  details?: any;
-}
-
-export interface Employee {
-  id: string;
-  name: string;
-  position: string;
-  department: string;
-  status: 'Active' | 'On Leave' | 'Terminated';
-  avatar: string;
-  role: UserRole;
+  status: 'Pending' | 'Approved' | 'Rejected';
 }
 
 export interface KPI {
@@ -73,48 +95,19 @@ export interface KPI {
   employeeName: string;
   period: string;
   score: number;
-  status: 'Draft' | 'Submitted' | 'Approved';
-  comments: string;
+  status: 'Draft' | 'Approved' | 'Pending';
   date: string;
-}
-
-export interface OKR {
-  id: string;
-  objective: string;
-  progress: number;
-  owner: string;
-  deadline: string;
-}
-
-export interface Course {
-  id: string;
-  title: string;
-  category: string;
-  duration: string;
-  modules: number;
-  enrolled: number;
-  thumbnail: string;
-}
-
-export interface TrainingProgress {
-  id: string;
-  employeeId: string;
-  employeeName: string;
-  courseId: string;
-  courseTitle: string;
-  progress: number;
-  status: 'Completed' | 'In Progress' | 'Not Started';
-  completionDate?: string;
+  comments?: string;
 }
 
 export interface LeaveRequest {
   id: string;
   employeeId: string;
   employeeName: string;
-  type: 'Sick' | 'Annual' | 'Personal' | 'Other';
+  type: string;
+  reason: string;
   startDate: string;
   endDate: string;
-  reason: string;
   status: 'Pending' | 'Approved' | 'Rejected';
 }
 
@@ -122,16 +115,16 @@ export interface OTRequest {
   id: string;
   employeeId: string;
   employeeName: string;
-  date: string;
   hours: number;
   reason: string;
+  date: string;
   status: 'Pending' | 'Approved' | 'Rejected';
 }
 
 export interface InventoryItem {
   id: string;
   name: string;
-  category: string;
+  category: 'PPE' | 'Office' | 'IT' | 'Tools';
   stock: number;
   minStock: number;
   unit: string;
@@ -139,11 +132,9 @@ export interface InventoryItem {
 
 export interface SupplyRequest {
   id: string;
-  employeeId: string;
-  employeeName: string;
+  itemId: string;
   itemName: string;
   quantity: number;
-  requestDate: string;
   status: 'Pending' | 'Approved' | 'Rejected';
 }
 
@@ -151,7 +142,7 @@ export interface Vehicle {
   id: string;
   model: string;
   plateNumber: string;
-  type: 'Sedan' | 'Van' | 'SUV' | 'Pickup';
+  type: string;
   status: 'Available' | 'Busy' | 'Maintenance';
 }
 
@@ -160,11 +151,10 @@ export interface VehicleBooking {
   vehicleId: string;
   vehicleName: string;
   employeeName: string;
-  startDate: string;
-  endDate: string;
-  destination: string;
   driverName?: string;
-  status: 'Pending' | 'Approved' | 'Rejected';
+  startDate: string;
+  destination: string;
+  status: string;
 }
 
 export interface MeetingRoom {
@@ -172,7 +162,7 @@ export interface MeetingRoom {
   name: string;
   capacity: number;
   facilities: string[];
-  status: 'Available' | 'Busy' | 'Maintenance';
+  status: 'Available' | 'Busy';
 }
 
 export interface RoomBooking {
@@ -185,117 +175,47 @@ export interface RoomBooking {
   startTime: string;
   endTime: string;
   title: string;
+  status: string;
   members: number;
   guests: number;
-  sat: number;
-  equipment: string[];
-  safetyEquipment: { name: string; quantity: number }[];
-  catering: { name: string; quantity: number }[];
-  tableLayout: string;
-  notes: string;
-  status: 'Pending' | 'Approved' | 'Rejected';
 }
 
 export interface MaintenanceTicket {
   id: string;
-  requester: string;
   item: string;
-  category: 'IT' | 'Building' | 'Other';
+  category: 'IT' | 'General';
   description: string;
+  requester: string;
   priority: 'High' | 'Medium' | 'Low';
   status: 'Pending' | 'In Progress' | 'Completed';
-  date: string;
 }
 
 export interface ExpenseClaim {
   id: string;
-  requester: string;
-  category: 'Travel' | 'Medical' | 'Entertainment' | 'Other';
   title: string;
+  category: string;
   amount: number;
   date: string;
-  status: 'Pending' | 'Approved' | 'Rejected';
-  receiptUrl?: string;
-}
-
-export type ProcurementType = 'OPEX' | 'CAPEX';
-
-export interface ProcurementItem {
-  id: string;
-  partNo?: string;
-  description: string;
-  unit: string;
-  quantity: number;
-  unitPrice: number;
-  total: number;
-  purchaseObjective?: string;
-}
-
-export interface Signature {
-  dataUrl?: string;
-  signerName: string;
-  signedDate: string;
+  requester: string;
   status: 'Pending' | 'Approved' | 'Rejected';
 }
 
 export interface PurchaseRequisition {
-  id: string; 
-  date: string;
-  department: string;
-  type: ProcurementType;
-  justification: string;
-  items: ProcurementItem[];
+  id: string;
   requester: string;
+  department: string;
+  type: string;
   totalAmount: number;
-  status: 'Draft' | 'Pending Supervisor' | 'Pending Purchasing' | 'Pending MD' | 'Approved' | 'Rejected' | 'Converted to PO';
-  
-  suggestedVendor?: string;
-  vendorAddress?: string;
-  vendorTel?: string;
-  vendorFax?: string;
-  
-  // Sequential Signatures for PR
-  requesterSign: Signature;
-  supervisorSign: Signature;
-  purchasingSign: Signature;
-  mdSign: Signature;
-
-  attachments?: string[];
+  status: string;
 }
 
 export interface PurchaseOrder {
   id: string;
-  date: string;
-  prRef: string;
   vendorName: string;
-  vendorAddress: string;
-  taxId?: string;
-  paymentTerms?: string;
+  prRef: string;
   deliveryDate?: string;
-  shippingAddress?: string;
-  creditTerm?: string;
-  deptOrder?: string;
-  capreNo?: string;
-  items: ProcurementItem[];
   totalAmount: number;
-  status: 'Draft' | 'Pending Purchasing' | 'Pending Supervisor' | 'Pending MD' | 'Approved' | 'Rejected' | 'Closed';
-
-  // Sequential Signatures for PO (matches SUMINO layout: Issued -> Check -> Approved)
-  purchasingSign: Signature;
-  supervisorSign: Signature;
-  mdSign: Signature;
-  
-  attachments?: string[];
-}
-
-export interface CAPEXProject {
-  id: string;
-  name: string;
-  totalValue: number;
-  lifespan: number;
-  roi: string;
-  strategicReason: string;
-  status: 'Proposed' | 'Reviewed' | 'Approved' | 'Implemented';
+  status: string;
 }
 
 export interface DocumentRequest {
@@ -304,6 +224,5 @@ export interface DocumentRequest {
   formName: string;
   requester: string;
   date: string;
-  status: 'Pending' | 'Approved' | 'Rejected' | 'Completed';
-  notes?: string;
+  status: 'Pending' | 'Approved' | 'Completed';
 }
